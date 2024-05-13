@@ -3,8 +3,8 @@ import serial
 import pandas as pd
 import math
 
-serial = serial.Serial('COM3', 115200)
-# serial = serial.Serial('/dev/ttyACM0', 115200)
+# serial = serial.Serial('COM3', 115200)
+serial = serial.Serial('/dev/ttyACM0', 115200)
 serial.close()
 serial.open()
 

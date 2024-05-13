@@ -10,25 +10,71 @@ import math
 from time import sleep
 
 #import pandas as pd
+from serial.tools import list_ports
+# hwinfo --short    --> hwinfo can also be used to list devices
+# lsusb             --> short info
+# usb-devices       --> shows alls device info
+# sudo dmesg        --> check connectifity
 
-ODrive = False
-# ODrive = True
+def find_serial_device(device_signature):
+    """Return the device path based on vender & product ID.
+    
+    The device is something like (like COM4, /dev/ttyUSB0 or /dev/cu.usbserial-1430)
+    """
+    candidates = list(list_ports.grep(device_signature))
+    if not candidates:
+        raise ValueError(f'No device with signature {device_signature} found')
+    if len(candidates) > 1:
+        raise ValueError(f'More than one device with signature {device_signature} found')
+    return candidates[0].device
+
+try:
+    print(find_serial_device('0483:5740'))
+    SPM_port = find_serial_device('0483:5740')
+    print('found SPM port...')
+    print(find_serial_device('1a86:7523'))
+    GRIPPER_port = find_serial_device('1a86:7523')
+    print('found GRIPPER port...')
+except:
+    print('No Device Found With Given ID...')
+    exit()
+
+""" VID = 483
+PID = 5740
+
+device_list = list_ports.comports()
+for device in device_list:
+        print(device)
+        if (device.vid != None or device.pid != None):
+            if ('{:04X}'.format(device.vid) == VID and
+                '{:04X}'.format(device.pid) == PID):
+                port = device.device
+                print(port)
+                break
+            port = None """
+
+#ODrive = False
+ODrive = True
 #SPM = False
 SPM = True
 
 Gripper = True
 
 try:
-    serial_SPM = serial.Serial('COM3', 115200)
-    # serial = serial.Serial('/dev/ttyACM0', 115200)
+    # serial_SPM = serial.Serial('COM3', 115200)
+    # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
+    serial_SPM = serial.Serial(SPM_port, 115200)
     serial_SPM.close()
     serial_SPM.open()
-    serial_Gripper = serial.Serial('COM21', 115200)
+
+    #serial_Gripper = serial.Serial('COM21', 115200)
+    serial_Gripper = serial.Serial(GRIPPER_port, 115200)
     serial_Gripper.close()
     serial_Gripper.open()
 except serial.serialutil.SerialException:
     print("No device connected...")
     connected = False
+    exit()
 
 time.sleep(2)
 
@@ -63,6 +109,12 @@ class Motor:
 motor_a = Motor("a",0)
 motor_b = Motor("b",0)
 motor_c = Motor("c",0)
+
+axis_0 = 0
+axis_1 = 0
+axis_2 = 0
+axis_3 = 0
+
 
 def scale(val, src, dst):
     """
@@ -224,10 +276,14 @@ def set_positions(position):
         EndEffector_Rotation =round((EndEffector_Rotation/360)*40,3)
 
         if ODrive == True:
-            odrv1.axis1.controller.input_pos = Base_Rotation
-            odrv1.axis0.controller.input_pos = LowerHinge_Rotation
-            odrv0.axis1.controller.input_pos = UpperHinge_Rotation
-            odrv0.axis0.controller.input_pos = EndEffector_Rotation
+            global axis_0
+            global axis_1
+            global axis_2
+            global axis_3
+            odrv1.axis1.controller.input_pos = Base_Rotation        + axis_0
+            odrv1.axis0.controller.input_pos = LowerHinge_Rotation  + axis_1
+            odrv0.axis1.controller.input_pos = UpperHinge_Rotation  + axis_2
+            odrv0.axis0.controller.input_pos = EndEffector_Rotation + axis_3
 
             # motorPositions[3] = Base_Rotation
             # motorPositions[4] = LowerHinge_Rotation
@@ -288,6 +344,30 @@ def get_positions():
 def index():
     ip_address = request.remote_address
     return "Requester IP: " + ip_address
+
+@app.route('/axis_0/<ax_0>', methods=['GET','POST'])
+def set_axis_0(ax_0):
+    global axis_0
+    axis_0 = axis_0 + int(ax_0)
+    return "axis_0 set to:"+ str(axis_0)
+
+@app.route('/axis_1/<ax_1>', methods=['GET','POST'])
+def set_axis_1(ax_1):
+    global axis_1
+    axis_1 = axis_1 + int(ax_1)
+    return "axis_1 set to:"+ str(axis_1)
+
+@app.route('/axis_2/<ax_2>', methods=['GET','POST'])
+def set_axis_2(ax_2):
+    global axis_2
+    axis_2 = axis_2 + int(ax_2)
+    return "axis_2 set to:"+ str(axis_2)
+
+@app.route('/axis_3/<ax_3>', methods=['GET','POST'])
+def set_axis_3(ax_3):
+    global axis_3
+    axis_3 = axis_3 + int(ax_3)
+    return "axis_3 set to:"+ str(axis_3)
 
 if __name__ == '__main__':
     # app.run(debug=True, port=80, host='0.0.0.0')
