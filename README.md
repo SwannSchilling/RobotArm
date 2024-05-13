@@ -12,7 +12,10 @@ The system architecture is composed of three main components:
 
 2. **Flask Server**: A Flask server acts as the intermediary between the Unity VR application and the physical robotic arm. It receives joint position data from the VR application and processes it to generate commands for controlling the real arm.
 
-3. **Serial Control To PCB**: USB Serial is responsible for managing the communication between the Unity VR application, the Flask server, and the physical robotic arm. PCB firmware is handling data transmission, protocol conversion, and command execution.
+3. **Serial Control To PCBs**: The communication between the Flask server and the physical robotic arm is facilitated by several PCBs:
+   - **2x ODrive**: The ODrive PCBs provide motor control for the robotic arm's actuators driven by Tarot 4108 BLDC and CUI AMT102 encoder.
+   - **1x Storm32 BGC 32Bit MCU**: The Storm32 BGC PCB provides motor control for the robotics arm end effector driven by EMAX GB2210 BLDC and AS5048A encoder.
+   - **1x Arduino Nano**: The Arduino Nano PCB provides motor control for the robotics arm gripper using the MX1508 and a geared 9V N20 DC motor.
 
 ## Repository Structure
 - `app.py`: Includes the Flask server implementation for receiving and processing joint position data.
@@ -41,7 +44,4 @@ Contributions to this project are encouraged and appreciated. To contribute, ple
 - Make your changes and ensure that they adhere to the project's coding standards.
 - Submit a pull request detailing the changes you've made and their significance.
 
-## License
-
-This project is licensed under the [MIT License](LICENSE).
 
