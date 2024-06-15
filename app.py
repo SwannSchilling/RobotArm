@@ -348,7 +348,7 @@ def index():
 @app.route('/axis_0/<ax_0>', methods=['GET','POST'])
 def set_axis_0(ax_0):
     global axis_0
-    axis_0 = axis_0 + int(ax_0)
+    axis_0 = axis_0 + int(ax_0)  
     return "axis_0 set to:"+ str(axis_0)
 
 @app.route('/axis_1/<ax_1>', methods=['GET','POST'])
