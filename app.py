@@ -3,13 +3,20 @@ import odrive
 from odrive.enums import *
 from odrive.utils import start_liveplotter
 import time
-from flask import Flask, json ,request
+from flask import Flask, json ,request, jsonify
 import serial
 import numpy as np
 import math
 from time import sleep
+import threading
 
-#import pandas as pd
+last_update_time = 0
+update_interval = 0.1  # Minimum interval between updates in seconds
+
+ODrive = False
+SPM = False
+Gripper = False
+
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
 # lsusb             --> short info
@@ -28,16 +35,17 @@ def find_serial_device(device_signature):
         raise ValueError(f'More than one device with signature {device_signature} found')
     return candidates[0].device
 
-try:
-    print(find_serial_device('0483:5740'))
-    SPM_port = find_serial_device('0483:5740')
-    print('found SPM port...')
-    print(find_serial_device('1a86:7523'))
-    GRIPPER_port = find_serial_device('1a86:7523')
-    print('found GRIPPER port...')
-except:
-    print('No Device Found With Given ID...')
-    exit()
+if Gripper == True:
+    try:
+        print(find_serial_device('0483:5740'))
+        SPM_port = find_serial_device('0483:5740')
+        print('found SPM port...')
+        print(find_serial_device('1a86:7523'))
+        GRIPPER_port = find_serial_device('1a86:7523')
+        print('found GRIPPER port...')
+    except:
+        print('No Device Found With Given ID...')
+        exit()
 
 """ VID = 483
 PID = 5740
@@ -53,28 +61,22 @@ for device in device_list:
                 break
             port = None """
 
-#ODrive = False
-ODrive = True
-#SPM = False
-SPM = True
+if SPM == True:
+    try:
+        # serial_SPM = serial.Serial('COM3', 115200)
+        # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
+        serial_SPM = serial.Serial(SPM_port, 115200)
+        serial_SPM.close()
+        serial_SPM.open()
 
-Gripper = True
-
-try:
-    # serial_SPM = serial.Serial('COM3', 115200)
-    # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
-    serial_SPM = serial.Serial(SPM_port, 115200)
-    serial_SPM.close()
-    serial_SPM.open()
-
-    #serial_Gripper = serial.Serial('COM21', 115200)
-    serial_Gripper = serial.Serial(GRIPPER_port, 115200)
-    serial_Gripper.close()
-    serial_Gripper.open()
-except serial.serialutil.SerialException:
-    print("No device connected...")
-    connected = False
-    exit()
+        #serial_Gripper = serial.Serial('COM21', 115200)
+        serial_Gripper = serial.Serial(GRIPPER_port, 115200)
+        serial_Gripper.close()
+        serial_Gripper.open()
+    except serial.serialutil.SerialException:
+        print("No device connected...")
+        connected = False
+        exit()
 
 time.sleep(2)
 
@@ -258,6 +260,14 @@ def set_positions_c(position_c):
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
+    global last_update_time
+    current_time = time.time()
+    
+    if current_time - last_update_time < update_interval:
+        return jsonify({"status": "rate_limit_exceeded"}), 429
+
+    last_update_time = current_time
+    
     try:
         global serial_SPM
         # global motorPositions
@@ -342,7 +352,7 @@ def get_positions():
 
 @app.route('/')
 def index():
-    ip_address = request.remote_address
+    ip_address = request.remote_addr
     return "Requester IP: " + ip_address
 
 @app.route('/axis_0/<ax_0>', methods=['GET','POST'])
