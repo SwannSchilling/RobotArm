@@ -6,43 +6,51 @@ import time
 import serial
 from time import sleep
 
-print(odrive.__version__)
 odrive_0 = False
 odrive_1 = True
+axis_0_0 = False
+axis_0_1 = False
+axis_1_0 = False
+axis_1_1 = True
 # Find a connected ODrive (this will block until you connect one)
 print("finding an odrive...")
+if not odrive_0 and not odrive_1:
+    print("no odrive set in parameter!")
+    exit()
+if odrive_0 and not axis_0_0 and not axis_0_1:
+    print("no axis selected on odrive0")
+    exit()
+if odrive_1 and not axis_1_0 and not axis_1_1:
+    print("no axis seleceted on odrive1")
+    exit()
 
 if odrive_0:
     print("odrive_0 found")
     odrv0 = odrive.find_any(serial_number="2088399B4D4D")
-
-    odrv0.axis0.controller.config.vel_limit = 100
-    odrv0.axis1.controller.config.vel_limit = 100
-    odrv0.axis0.controller.config.vel_gain = 0.02
-    odrv0.axis1.controller.config.vel_gain = 0.02
-    odrv0.axis0.controller.config.pos_gain = 2
-    odrv0.axis1.controller.config.pos_gain = 2
-    odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
-    odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
+    if axis_0_0:
+        odrv0.axis0.controller.config.vel_limit = 100
+        odrv0.axis0.controller.config.vel_gain = 0.02
+        odrv0.axis0.controller.config.pos_gain = 2
+        odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
+    if axis_0_1:
+        odrv0.axis1.controller.config.vel_limit = 100
+        odrv0.axis1.controller.config.vel_gain = 0.02
+        odrv0.axis1.controller.config.pos_gain = 2
+        odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
 
 if odrive_1:
     print("odrive_1 found")
     odrv1 = odrive.find_any(serial_number="2068399D4D4D")
-    hw_major = odrv1.hw_version_major
-    hw_minor = odrv1.hw_version_minor
-    print(str(hw_major)+"."+str(hw_minor))
-    fw_major = odrv1.fw_version_major
-    fw_minor = odrv1.fw_version_minor
-    fw_revision = odrv1.fw_version_revision
-    print(str(fw_major)+"."+str(fw_minor)+"."+str(fw_revision  ))
-    odrv1.axis0.controller.config.vel_limit = 100
-    odrv1.axis1.controller.config.vel_limit = 100
-    odrv1.axis0.controller.config.vel_gain = 0.02
-    odrv1.axis1.controller.config.vel_gain = 0.02
-    odrv1.axis0.controller.config.pos_gain = 2
-    odrv1.axis1.controller.config.pos_gain = 2
-    odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
-    odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
+    if axis_1_0:
+        odrv1.axis0.controller.config.vel_limit = 100
+        odrv1.axis0.controller.config.vel_gain = 0.02
+        odrv1.axis0.controller.config.pos_gain = 2
+        odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
+    if axis_1_1:
+        odrv1.axis1.controller.config.vel_limit = 100
+        odrv1.axis1.controller.config.vel_gain = 0.02
+        odrv1.axis1.controller.config.pos_gain = 2
+        odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
 # Find an ODrive that is connected on the serial port /dev/ttyUSB0
 #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
@@ -55,24 +63,27 @@ print("starting calibration...")
 # odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
 
 if odrive_0:
-    odrv0.axis0.requested_state = INPUT_MODE_POS_FILTER
-    odrv0.axis1.requested_state = INPUT_MODE_POS_FILTER
-    while odrv0.axis0.current_state != AXIS_STATE_IDLE:
-        time.sleep(0.1)
-    while odrv0.axis1.current_state != AXIS_STATE_IDLE:
-        time.sleep(0.1)
-    odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    if axis_0_0:
+        odrv0.axis0.requested_state = INPUT_MODE_POS_FILTER
+        while odrv0.axis0.current_state != AXIS_STATE_IDLE:
+            time.sleep(0.1)
+        odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    if axis_0_1:
+        odrv0.axis1.requested_state = INPUT_MODE_POS_FILTER
+        while odrv0.axis1.current_state != AXIS_STATE_IDLE:
+            time.sleep(0.1)
+        odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 if odrive_1:
-    odrv1.axis0.requested_state = INPUT_MODE_POS_FILTER
-    odrv1.axis1.requested_state = INPUT_MODE_POS_FILTER
-    while odrv1.axis0.current_state != AXIS_STATE_IDLE:
-        time.sleep(0.1)
-    while odrv1.axis1.current_state != AXIS_STATE_IDLE:
-        time.sleep(0.1)
-    odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    if axis_1_0:
+        odrv1.axis0.requested_state = INPUT_MODE_POS_FILTER
+        while odrv1.axis0.current_state != AXIS_STATE_IDLE:
+            time.sleep(0.1)
+        odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    if axis_1_1:
+        while odrv1.axis1.current_state != AXIS_STATE_IDLE:
+            time.sleep(0.1)
+        odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
 #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
