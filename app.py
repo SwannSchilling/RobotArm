@@ -14,8 +14,7 @@ last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = False
-SPM = False
-Gripper = False
+SPM_Gripper = False
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -35,7 +34,7 @@ def find_serial_device(device_signature):
         raise ValueError(f'More than one device with signature {device_signature} found')
     return candidates[0].device
 
-if Gripper == True:
+if SPM_Gripper == True:
     try:
         print(find_serial_device('0483:5740'))
         SPM_port = find_serial_device('0483:5740')
@@ -61,7 +60,7 @@ for device in device_list:
                 break
             port = None """
 
-if SPM == True:
+if SPM_Gripper == True:
     try:
         # serial_SPM = serial.Serial('COM3', 115200)
         # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
