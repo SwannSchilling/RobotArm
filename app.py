@@ -187,6 +187,18 @@ if ODrive == True:
     #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
     #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
     #start_liveplotter(lambda: [odrv0.axis1.encoder.pos_estimate, odrv0.axis1.controller.pos_setpoint])
+
+    # Function to start the live plotter
+def liveplot():
+    start_liveplotter(lambda: [
+        odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
+        odrv0.axis1.encoder.pos_estimate,              # Position estimate of axis1
+        odrv0.axis1.controller.pos_setpoint            # Position setpoint of axis1
+    ])
+
+# Start the live plotter
+liveplot()
+
 else:
     print("not connecting to the Odrive this time...")
 
