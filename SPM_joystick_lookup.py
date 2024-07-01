@@ -22,6 +22,7 @@ import pygame
 import serial
 import numpy as np
 from scipy.interpolate import griddata
+import math
 
 class SPMLookupTable:
     def __init__(self, data):
@@ -56,10 +57,11 @@ data = np.loadtxt('data.csv', delimiter=',', skiprows=1)
 # Create lookup table
 lut = SPMLookupTable(data)
 
-SPM = False
 last_update_time = 0
 update_interval = 0.5  # Minimum interval between updates in seconds
 
+
+SPM_Gripper = True
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -79,7 +81,7 @@ def find_serial_device(device_signature):
         raise ValueError(f'More than one device with signature {device_signature} found')
     return candidates[0].device
 
-if SPM:
+if SPM_Gripper == True:
     try:
         print(find_serial_device('0483:5740'))
         SPM_port = find_serial_device('0483:5740')
@@ -88,18 +90,32 @@ if SPM:
         print('No Device Found With Given ID...')
         exit()
 
+""" VID = 483
+PID = 5740
+
+device_list = list_ports.comports()
+for device in device_list:
+        print(device)
+        if (device.vid != None or device.pid != None):
+            if ('{:04X}'.format(device.vid) == VID and
+                '{:04X}'.format(device.pid) == PID):
+                port = device.device
+                print(port)
+                break
+            port = None """
+
+if SPM_Gripper == True:
     try:
-        # serial_SPM = serial.Serial('COM3', 115200)
-        # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
         serial_SPM = serial.Serial(SPM_port, 115200)
         serial_SPM.close()
         serial_SPM.open()
+
     except serial.serialutil.SerialException:
         print("No device connected...")
         connected = False
         exit()
 
-    time.sleep(2)
+time.sleep(2)
 
 def scale(val, src, dst):
     """
@@ -219,6 +235,28 @@ class PS4Controller(object):
                     print(f"For x={x}, y={y}: result={result}")
                     m1, m2, m3 = result
                     print(f"m1={m1:.4f}, m2={m2:.4f}, m3={m3:.4f}")
+
+                    
+                    UpperRing = 5*(float(m1)+0)
+                    MiddleRing = 5*(float(m2)+0)
+                    LowerRing = 5*(float(m3))
+
+                    # UpperRing = 25*(float(motorPositions[2]))
+                    # MiddleRing = 25*(float(motorPositions[1]))
+                    # LowerRing = 25*(float(motorPositions[0]))
+                    UpperRing = round((math.radians(UpperRing)),10)
+                    MiddleRing = round((math.radians(MiddleRing)), 10)
+                    LowerRing = round((math.radians(LowerRing)), 10)
+                    UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
+                    print(UpperRing_Rotation)
+                    serial_SPM.write(UpperRing_Rotation.encode())
+                    MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
+                    print(MiddleRing_Rotation)
+                    serial_SPM.write(MiddleRing_Rotation.encode())
+                    LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
+                    print(LowerRing_Rotation)
+                    serial_SPM.write(LowerRing_Rotation.encode())
+                
 
                 # if self.button_data[1] == True:
                 #     if calibration == True:
