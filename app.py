@@ -14,7 +14,13 @@ last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = False
+SPM = False
+Gripper = False
 SPM_Gripper = False
+
+# Initialize last positions with a different initial value to ensure they update on the first run
+last_odrive_positions = [None] * 4
+idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -189,15 +195,15 @@ if ODrive == True:
     #start_liveplotter(lambda: [odrv0.axis1.encoder.pos_estimate, odrv0.axis1.controller.pos_setpoint])
 
     # Function to start the live plotter
-def liveplot():
-    start_liveplotter(lambda: [
-        odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
-        odrv0.axis1.encoder.pos_estimate,              # Position estimate of axis1
-        odrv0.axis1.controller.pos_setpoint            # Position setpoint of axis1
-    ])
+    def liveplot():
+        start_liveplotter(lambda: [
+            odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
+            odrv0.axis1.encoder.pos_estimate,              # Position estimate of axis1
+            odrv0.axis1.controller.pos_setpoint            # Position setpoint of axis1
+        ])
 
-# Start the live plotter
-liveplot()
+    # Start the live plotter
+    # liveplot()
 
 else:
     print("not connecting to the Odrive this time...")
@@ -271,7 +277,7 @@ def set_positions_c(position_c):
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
-    global last_update_time
+    global last_update_time, last_odrive_positions
     current_time = time.time()
     
     if current_time - last_update_time < update_interval:
@@ -291,26 +297,67 @@ def set_positions(position):
         UpperHinge_Rotation = float(motorPositions[5])
         EndEffector_Rotation = float(motorPositions[6])
 
-        Base_Rotation = round((Base_Rotation/360)*40,3)
-        LowerHinge_Rotation = round((LowerHinge_Rotation/360)*40,3)
-        UpperHinge_Rotation = round((UpperHinge_Rotation/360)*40,3)
-        EndEffector_Rotation =round((EndEffector_Rotation/360)*40,3)
+        # Base_Rotation = round((Base_Rotation/360)*40,3)
+        # LowerHinge_Rotation = round((LowerHinge_Rotation/360)*40,3)
+        # UpperHinge_Rotation = round((UpperHinge_Rotation/360)*40,3)
+        # EndEffector_Rotation =round((EndEffector_Rotation/360)*40,3)
 
-        if ODrive == True:
-            global axis_0
-            global axis_1
-            global axis_2
-            global axis_3
-            odrv1.axis1.controller.input_pos = Base_Rotation        + axis_0
-            odrv1.axis0.controller.input_pos = LowerHinge_Rotation  + axis_1
-            odrv0.axis1.controller.input_pos = UpperHinge_Rotation  + axis_2
-            odrv0.axis0.controller.input_pos = EndEffector_Rotation + axis_3
+        # if ODrive 
+        #     global axis_0, axis_1, axis_2, axis_3
+        #     odrv1.axis1.controller.input_pos = Base_Rotation        + axis_0
+        #     odrv1.axis0.controller.input_pos = LowerHinge_Rotation  + axis_1
+        #     odrv0.axis1.controller.input_pos = UpperHinge_Rotation  + axis_2
+        #     odrv0.axis0.controller.input_pos = EndEffector_Rotation + axis_3
 
-            # motorPositions[3] = Base_Rotation
-            # motorPositions[4] = LowerHinge_Rotation
-            # motorPositions[5] = UpperHinge_Rotation
-            # motorPositions[5] = EndEffector_Rotation
-            # counter(motorPositions)
+        #     # motorPositions[3] = Base_Rotation
+        #     # motorPositions[4] = LowerHinge_Rotation
+        #     # motorPositions[5] = UpperHinge_Rotation
+        #     # motorPositions[5] = EndEffector_Rotation
+        #     # counter(motorPositions)
+
+        # Normalize the positions
+        Base_Rotation_norm = round((Base_Rotation / 360) * 40, 3)
+        LowerHinge_Rotation_norm = round((LowerHinge_Rotation / 360) * 40, 3)
+        UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
+        EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
+
+        if ODrive:
+            global axis_0, axis_1, axis_2, axis_3
+
+            # Check if positions have changed
+            base_changed = abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold
+            lower_hinge_changed = abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold
+            upper_hinge_changed = abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold
+            end_effector_changed = abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold
+
+            # Set motors to closed loop control if positions have changed
+            if base_changed:
+                odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
+                odrv1.axis1.requested_state = odrv1.axis1.AXIS_STATE_CLOSED_LOOP_CONTROL
+                last_odrive_positions[0] = Base_Rotation_norm
+            else:
+                odrv1.axis1.requested_state = odrv1.axis1.AXIS_STATE_IDLE
+
+            if lower_hinge_changed:
+                odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
+                odrv1.axis0.requested_state = odrv1.axis0.AXIS_STATE_CLOSED_LOOP_CONTROL
+                last_odrive_positions[1] = LowerHinge_Rotation_norm
+            else:
+                odrv1.axis0.requested_state = odrv1.axis0.AXIS_STATE_IDLE
+
+            if upper_hinge_changed:
+                odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
+                odrv0.axis1.requested_state = odrv0.axis1.AXIS_STATE_CLOSED_LOOP_CONTROL
+                last_odrive_positions[2] = UpperHinge_Rotation_norm
+            else:
+                odrv0.axis1.requested_state = odrv0.axis1.AXIS_STATE_IDLE
+
+            if end_effector_changed:
+                odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
+                odrv0.axis0.requested_state = odrv0.axis0.AXIS_STATE_CLOSED_LOOP_CONTROL
+                last_odrive_positions[3] = EndEffector_Rotation_norm
+            else:
+                odrv0.axis0.requested_state = odrv0.axis0.AXIS_STATE_IDLE
 
         if SPM == True:
             UpperRing = 5*(float(motorPositions[0])+30)
