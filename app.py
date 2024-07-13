@@ -157,26 +157,26 @@ if ODrive == True:
     odrv0.axis0.controller.config.vel_gain = 0.01
     odrv0.axis1.controller.config.vel_gain = 0.01
 
-    odrv1.axis0.controller.config.vel_gain = 0.04
-    odrv1.axis1.controller.config.vel_gain = 0.04
+    odrv1.axis0.controller.config.vel_gain = 0.02
+    odrv1.axis1.controller.config.vel_gain = 0.02
 
     odrv0.axis0.controller.config.vel_limit = 100
     odrv0.axis1.controller.config.vel_limit = 100
 
-    odrv1.axis0.controller.config.vel_limit = 300
-    odrv1.axis1.controller.config.vel_limit = 300
+    odrv1.axis0.controller.config.vel_limit = 200
+    odrv1.axis1.controller.config.vel_limit = 200
 
     odrv0.axis0.controller.config.pos_gain = 2
     odrv0.axis1.controller.config.pos_gain = 2
 
-    odrv1.axis0.controller.config.pos_gain = 4
-    odrv1.axis1.controller.config.pos_gain = 4
+    odrv1.axis0.controller.config.pos_gain = 3
+    odrv1.axis1.controller.config.pos_gain = 3
 
     odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
 
-    odrv1.axis0.controller.config.input_filter_bandwidth = 0.5
-    odrv1.axis1.controller.config.input_filter_bandwidth = 0.5
+    odrv1.axis0.controller.config.input_filter_bandwidth = 0.2
+    odrv1.axis1.controller.config.input_filter_bandwidth = 0.2
 
 
     # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
