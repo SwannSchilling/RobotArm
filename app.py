@@ -330,31 +330,31 @@ def set_positions(position):
 
             if abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold:
                 odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
-                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[0] = Base_Rotation_norm
-            else:
-                odrv1.axis1.requested_state = AXIS_STATE_IDLE
+            #else:
+                #odrv1.axis1.requested_state = AXIS_STATE_IDLE
 
             if abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold:
                 odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
-                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
-            else:
-                odrv1.axis0.requested_state = AXIS_STATE_IDLE
+            #else:
+                #odrv1.axis0.requested_state = AXIS_STATE_IDLE
 
             if abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold:
                 odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
-                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                #odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
-            else:
-                odrv0.axis1.requested_state = AXIS_STATE_IDLE
+            #else:
+                #odrv0.axis1.requested_state = AXIS_STATE_IDLE
 
             if abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold:
                 odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
-                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                #odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[3] = EndEffector_Rotation_norm
-            else:
-                odrv0.axis0.requested_state = AXIS_STATE_IDLE
+            #else:
+                #odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
             # Get the states of the ODrive axes
             odrive_states['axis1'] = odrv1.axis1.current_state
