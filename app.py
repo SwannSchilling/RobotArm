@@ -9,6 +9,11 @@ import numpy as np
 import math
 from time import sleep
 import threading
+import logging
+
+# Suppress default logging of HTTP requests
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
@@ -326,33 +331,46 @@ def set_positions(position):
         if ODrive:
             global axis_0, axis_1, axis_2, axis_3
 
+            print(f"Base_Rotation_norm: {Base_Rotation_norm}, last: {last_odrive_positions[0]}")
+            print(f"LowerHinge_Rotation_norm: {LowerHinge_Rotation_norm}, last: {last_odrive_positions[1]}")
+            print(f"UpperHinge_Rotation_norm: {UpperHinge_Rotation_norm}, last: {last_odrive_positions[2]}")
+            print(f"EndEffector_Rotation_norm: {EndEffector_Rotation_norm}, last: {last_odrive_positions[3]}")
+
             if abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold:
+                print("Base rotation has changed")
                 odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
-                #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[0] = Base_Rotation_norm
-            #else:
-                #odrv1.axis1.requested_state = AXIS_STATE_IDLE
+            else:
+                print("Base rotation has not changed")
+                odrv1.axis1.requested_state = AXIS_STATE_IDLE
 
             if abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold:
+                print("Lower hinge rotation has changed")
                 odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
-                #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
-            #else:
-                #odrv1.axis0.requested_state = AXIS_STATE_IDLE
+            else:
+                print("Lower hinge rotation has not changed")
+                odrv1.axis0.requested_state = AXIS_STATE_IDLE
 
             if abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold:
+                print("Upper hinge rotation has changed")
                 odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
-                #odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
-            #else:
-                #odrv0.axis1.requested_state = AXIS_STATE_IDLE
+            else:
+                print("Upper hinge rotation has not changed")
+                odrv0.axis1.requested_state = AXIS_STATE_IDLE
 
             if abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold:
+                print("End effector rotation has changed")
                 odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
-                #odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[3] = EndEffector_Rotation_norm
-            #else:
-                #odrv0.axis0.requested_state = AXIS_STATE_IDLE
+            else:
+                print("End effector rotation has not changed")
+                odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
             # Get the states of the ODrive axes
             odrive_states['axis1'] = odrv1.axis1.current_state
@@ -404,13 +422,9 @@ def set_positions(position):
 
     # Return motor positions and their states
     return jsonify({
-        #"motor_positions": motorPositions,
-        "odrive_states": odrive_states,
-        "BaseRotation": Base_Rotation_norm,
-        "last_odrive_positions_0": last_odrive_positions[0],
-        "LowerHingeRotation": LowerHinge_Rotation_norm,
-        "Last_odrive_positions_1": last_odrive_positions[1]
-        })
+        "motor_positions": motorPositions,
+        "odrive_states": odrive_states
+    })
 
 @app.route('/get_positions', methods=['GET'])
 def get_positions():
