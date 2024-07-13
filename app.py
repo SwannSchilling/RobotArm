@@ -407,8 +407,8 @@ def set_positions(position):
         #"motor_positions": motorPositions,
         "odrive_states": odrive_states,
         "BaseRotation": Base_Rotation_norm,
-        "last_odrive_positions_0": last_odrive_positions[0]
-        "LowerHingeRotation": LowerHinge_Rotation_norm
+        "last_odrive_positions_0": last_odrive_positions[0],
+        "LowerHingeRotation": LowerHinge_Rotation_norm,
         "Last_odrive_positions_1": last_odrive_positions[1]
         })
 
