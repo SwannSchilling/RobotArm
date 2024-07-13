@@ -323,8 +323,6 @@ def set_positions(position):
 
         odrive_states = {}
 
-        odrive_states = {}
-
         if ODrive:
             global axis_0, axis_1, axis_2, axis_3
 
@@ -406,9 +404,13 @@ def set_positions(position):
 
     # Return motor positions and their states
     return jsonify({
-        "motor_positions": motorPositions,
-        "odrive_states": odrive_states
-    })
+        #"motor_positions": motorPositions,
+        "odrive_states": odrive_states,
+        "BaseRotation": Base_Rotation_norm,
+        "last_odrive_positions_0": last_odrive_positions[0]
+        "LowerHingeRotation": LowerHinge_Rotation_norm
+        "Last_odrive_positions_1": last_odrive_positions[1]
+        })
 
 @app.route('/get_positions', methods=['GET'])
 def get_positions():
