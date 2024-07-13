@@ -20,7 +20,7 @@ SPM_Gripper = True
 
 # Initialize last positions with a different initial value to ensure they update on the first run
 last_odrive_positions = [None] * 4
-idle_threshold = 0.001  # Define a threshold for position change to avoid floating-point issues
+idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -323,49 +323,40 @@ def set_positions(position):
 
         odrive_states = {}
 
+        odrive_states = {}
+
         if ODrive:
             global axis_0, axis_1, axis_2, axis_3
 
-            # Check if positions have changed
-            base_changed = abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold
-            lower_hinge_changed = abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold
-            upper_hinge_changed = abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold
-            end_effector_changed = abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold
-
-            # Set motors to closed loop control if positions have changed
-            if base_changed:
+            if abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold:
                 odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
-                # odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[0] = Base_Rotation_norm
             else:
-                # odrv1.axis1.requested_state = AXIS_STATE_IDLE
-                pass
+                odrv1.axis1.requested_state = AXIS_STATE_IDLE
 
-            if lower_hinge_changed:
+            if abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold:
                 odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
-                # odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
             else:
-                # odrv1.axis0.requested_state = AXIS_STATE_IDLE
-                pass
+                odrv1.axis0.requested_state = AXIS_STATE_IDLE
 
-            if upper_hinge_changed:
+            if abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold:
                 odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
-                # odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
             else:
-                # odrv0.axis1.requested_state = AXIS_STATE_IDLE
-                pass
+                odrv0.axis1.requested_state = AXIS_STATE_IDLE
 
-            if end_effector_changed:
+            if abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold:
                 odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
-                # odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[3] = EndEffector_Rotation_norm
             else:
-                # odrv0.axis0.requested_state = AXIS_STATE_IDLE
-                pass
+                odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
-        # Get the states of the ODrive axes
+            # Get the states of the ODrive axes
             odrive_states['axis1'] = odrv1.axis1.current_state
             odrive_states['axis0'] = odrv1.axis0.current_state
             odrive_states['axis3'] = odrv0.axis1.current_state
