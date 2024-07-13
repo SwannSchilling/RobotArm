@@ -23,8 +23,10 @@ SPM = True
 Gripper = True
 SPM_Gripper = True
 
-# Initialize last positions with a different initial value to ensure they update on the first run
+# Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
+last_position_change_time = [0] * 4  # Track the last time each motor's position changed
+idle_timeout = 10.0  # Time in seconds after which to idle the motor if position hasn't changed
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 from serial.tools import list_ports
@@ -145,6 +147,7 @@ if ODrive == True:
 
     odrv0.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
     odrv0.axis1.controller.config.vel_integrator_gain = 0.3333333432674408
+
     odrv1.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
     odrv1.axis1.controller.config.vel_integrator_gain = 0.3333333432674408
     # odrv0.axis0.controller.config.vel_integrator_gain = 0
@@ -153,21 +156,35 @@ if ODrive == True:
     # odrv1.axis1.controller.config.vel_integrator_gain = 0
     odrv0.axis0.controller.config.vel_gain = 0.01
     odrv0.axis1.controller.config.vel_gain = 0.01
-    odrv1.axis0.controller.config.vel_gain = 0.01
-    odrv1.axis1.controller.config.vel_gain = 0.01
+
+    odrv1.axis0.controller.config.vel_gain = 0.05
+    odrv1.axis1.controller.config.vel_gain = 0.05
 
     odrv0.axis0.controller.config.vel_limit = 100
     odrv0.axis1.controller.config.vel_limit = 100
-    odrv1.axis0.controller.config.vel_limit = 100
-    odrv1.axis1.controller.config.vel_limit = 100
+
+    odrv1.axis0.controller.config.vel_limit = 200
+    odrv1.axis1.controller.config.vel_limit = 200
+
     odrv0.axis0.controller.config.pos_gain = 2
     odrv0.axis1.controller.config.pos_gain = 2
-    odrv1.axis0.controller.config.pos_gain = 2
-    odrv1.axis1.controller.config.pos_gain = 2
+
+    odrv1.axis0.controller.config.pos_gain = 20
+    odrv1.axis1.controller.config.pos_gain = 20
+
     odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
-    odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
-    odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
+
+    odrv1.axis0.controller.config.input_filter_bandwidth = 2
+    odrv1.axis1.controller.config.input_filter_bandwidth = 2
+
+
+    odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
+    odrv0.axis1.controller.config.current_lim = 30  # Example current limit in Amps
+
+    odrv1.axis0.controller.config.current_lim = 30  # Example current limit in Amps
+    odrv1.axis1.controller.config.current_lim = 30  # Example current limit in Amps
+    
 
     # Calibrate motor and wait for it to finish
     print("starting calibration...")
@@ -282,7 +299,7 @@ def set_positions_c(position_c):
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
-    global last_update_time, last_odrive_positions
+    global last_update_time, last_odrive_positions, last_position_change_time
     current_time = time.time()
     
     if current_time - last_update_time < update_interval:
@@ -342,8 +359,9 @@ def set_positions(position):
                 odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
                 last_odrive_positions[0] = Base_Rotation_norm
-            else:
-                print("Base rotation has not changed")
+                last_position_change_time[0] = current_time
+            elif current_time - last_position_change_time[0] > idle_timeout:
+                print("Base rotation has not changed for timeout duration")
                 odrv1.axis1.requested_state = AXIS_STATE_IDLE
 
             # Lower Hinge Rotation
@@ -352,8 +370,9 @@ def set_positions(position):
                 odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
-            else:
-                print("Lower hinge rotation has not changed")
+                last_position_change_time[1] = current_time
+            elif current_time - last_position_change_time[1] > idle_timeout:
+                print("Lower hinge rotation has not changed for timeout duration")
                 odrv1.axis0.requested_state = AXIS_STATE_IDLE
 
             # Upper Hinge Rotation
@@ -362,8 +381,9 @@ def set_positions(position):
                 odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
-            else:
-                print("Upper hinge rotation has not changed")
+                last_position_change_time[2] = current_time
+            elif current_time - last_position_change_time[2] > idle_timeout:
+                print("Upper hinge rotation has not changed for timeout duration")
                 odrv0.axis1.requested_state = AXIS_STATE_IDLE
 
             # End Effector Rotation
@@ -372,10 +392,16 @@ def set_positions(position):
                 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
                 last_odrive_positions[3] = EndEffector_Rotation_norm
-            else:
-                print("End effector rotation has not changed")
+                last_position_change_time[3] = current_time
+            elif current_time - last_position_change_time[3] > idle_timeout:
+                print("End effector rotation has not changed for timeout duration")
                 odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
+            # Get the states of the ODrive axes
+            odrive_states['axis1'] = odrv1.axis1.current_state
+            odrive_states['axis0'] = odrv1.axis0.current_state
+            odrive_states['axis3'] = odrv0.axis1.current_state
+            odrive_states['axis2'] = odrv0.axis0.current_state
             # Get the states of the ODrive axes
             odrive_states['axis1'] = odrv1.axis1.current_state
             odrive_states['axis0'] = odrv1.axis0.current_state
