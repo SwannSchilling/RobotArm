@@ -335,34 +335,34 @@ def set_positions(position):
             # Set motors to closed loop control if positions have changed
             if base_changed:
                 odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
-                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                # odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[0] = Base_Rotation_norm
             else:
-                odrv1.axis1.requested_state = AXIS_STATE_IDLE
+                # odrv1.axis1.requested_state = AXIS_STATE_IDLE
                 pass
 
             if lower_hinge_changed:
                 odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
-                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                # odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
             else:
-                odrv1.axis0.requested_state = AXIS_STATE_IDLE
+                # odrv1.axis0.requested_state = AXIS_STATE_IDLE
                 pass
 
             if upper_hinge_changed:
                 odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
-                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                # odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
             else:
-                odrv0.axis1.requested_state = AXIS_STATE_IDLE
+                # odrv0.axis1.requested_state = AXIS_STATE_IDLE
                 pass
 
             if end_effector_changed:
                 odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
-                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                # odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 last_odrive_positions[3] = EndEffector_Rotation_norm
             else:
-                odrv0.axis0.requested_state = AXIS_STATE_IDLE
+                # odrv0.axis0.requested_state = AXIS_STATE_IDLE
                 pass
 
         # Get the states of the ODrive axes
