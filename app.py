@@ -13,10 +13,10 @@ import threading
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = False
-SPM = False
-Gripper = False
-SPM_Gripper = False
+ODrive = True
+SPM = True
+Gripper = True
+SPM_Gripper = True
 
 # Initialize last positions with a different initial value to ensure they update on the first run
 last_odrive_positions = [None] * 4
