@@ -24,7 +24,7 @@ Gripper = True
 SPM_Gripper = True
 
 # Initialize last positions with a different initial value to ensure they update on the first run
-last_odrive_positions = [None] * 4
+last_odrive_positions = [float('-inf')] * 4
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 from serial.tools import list_ports
@@ -336,37 +336,41 @@ def set_positions(position):
             print(f"UpperHinge_Rotation_norm: {UpperHinge_Rotation_norm}, last: {last_odrive_positions[2]}")
             print(f"EndEffector_Rotation_norm: {EndEffector_Rotation_norm}, last: {last_odrive_positions[3]}")
 
-            if abs(Base_Rotation_norm - (last_odrive_positions[0] or Base_Rotation_norm)) > idle_threshold:
+            # Base Rotation
+            if abs(Base_Rotation_norm - last_odrive_positions[0]) > idle_threshold:
                 print("Base rotation has changed")
-                odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
                 odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
                 last_odrive_positions[0] = Base_Rotation_norm
             else:
                 print("Base rotation has not changed")
                 odrv1.axis1.requested_state = AXIS_STATE_IDLE
 
-            if abs(LowerHinge_Rotation_norm - (last_odrive_positions[1] or LowerHinge_Rotation_norm)) > idle_threshold:
+            # Lower Hinge Rotation
+            if abs(LowerHinge_Rotation_norm - last_odrive_positions[1]) > idle_threshold:
                 print("Lower hinge rotation has changed")
-                odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
                 odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
                 last_odrive_positions[1] = LowerHinge_Rotation_norm
             else:
                 print("Lower hinge rotation has not changed")
                 odrv1.axis0.requested_state = AXIS_STATE_IDLE
 
-            if abs(UpperHinge_Rotation_norm - (last_odrive_positions[2] or UpperHinge_Rotation_norm)) > idle_threshold:
+            # Upper Hinge Rotation
+            if abs(UpperHinge_Rotation_norm - last_odrive_positions[2]) > idle_threshold:
                 print("Upper hinge rotation has changed")
-                odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
                 odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
                 last_odrive_positions[2] = UpperHinge_Rotation_norm
             else:
                 print("Upper hinge rotation has not changed")
                 odrv0.axis1.requested_state = AXIS_STATE_IDLE
 
-            if abs(EndEffector_Rotation_norm - (last_odrive_positions[3] or EndEffector_Rotation_norm)) > idle_threshold:
+            # End Effector Rotation
+            if abs(EndEffector_Rotation_norm - last_odrive_positions[3]) > idle_threshold:
                 print("End effector rotation has changed")
-                odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
                 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
                 last_odrive_positions[3] = EndEffector_Rotation_norm
             else:
                 print("End effector rotation has not changed")
