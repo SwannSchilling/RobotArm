@@ -288,7 +288,7 @@ def set_positions(position):
     try:
         global serial_SPM
         # global motorPositions
-        print(position)
+        # print(position)
         motorPositions = str(position).replace(",",".")
         motorPositions = motorPositions.split('&')
 
@@ -321,6 +321,8 @@ def set_positions(position):
         UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
         EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
 
+        odrive_states = {}
+        
         if ODrive:
             global axis_0, axis_1, axis_2, axis_3
 
@@ -359,6 +361,12 @@ def set_positions(position):
             else:
                 odrv0.axis0.requested_state = odrv0.axis0.AXIS_STATE_IDLE
 
+        # Get the states of the ODrive axes
+            odrive_states['axis1'] = odrv1.axis1.current_state
+            odrive_states['axis0'] = odrv1.axis0.current_state
+            odrive_states['axis3'] = odrv0.axis1.current_state
+            odrive_states['axis2'] = odrv0.axis0.current_state
+
         if SPM == True:
             UpperRing = 5*(float(motorPositions[0])+30)
             MiddleRing = 5*(float(motorPositions[1])+60)
@@ -370,13 +378,13 @@ def set_positions(position):
             MiddleRing = round((math.radians(MiddleRing)), 10)
             LowerRing = round((math.radians(LowerRing)), 10)
             UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
-            print(UpperRing_Rotation)
+            # print(UpperRing_Rotation)
             serial_SPM.write(UpperRing_Rotation.encode())
             MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
-            print(MiddleRing_Rotation)
+            # print(MiddleRing_Rotation)
             serial_SPM.write(MiddleRing_Rotation.encode())
             LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
-            print(LowerRing_Rotation)
+            # print(LowerRing_Rotation)
             serial_SPM.write(LowerRing_Rotation.encode())
 
         if Gripper == True:
@@ -401,7 +409,11 @@ def set_positions(position):
     # graph = pd.DataFrame(y, x)
     # graph.plot(kind='line', grid=True, title='my graph', ylabel='servoposition', xlabel='time', xlim=(1, 4))
 
-    return json.dumps(motorPositions)
+    # Return motor positions and their states
+    return jsonify({
+        "motor_positions": motorPositions,
+        "odrive_states": odrive_states
+    })
 
 @app.route('/get_positions', methods=['GET'])
 def get_positions():
