@@ -132,6 +132,13 @@ axis_1 = 0
 axis_2 = 0
 axis_3 = 0
 
+vel_limit = 50
+vel_gain = 0.01
+pos_gain = 1
+input_filter_bandwidth = 0.1
+
+current_lim = 5
+calibration_current = 5
 
 def scale(val, src, dst):
     """
@@ -161,35 +168,34 @@ if ODrive == True:
     # odrv0.axis1.controller.config.vel_integrator_gain = 0
     # odrv1.axis0.controller.config.vel_integrator_gain = 0
     # odrv1.axis1.controller.config.vel_integrator_gain = 0
-    odrv0.axis0.controller.config.vel_gain = 0.01
-    odrv0.axis1.controller.config.vel_gain = 0.01
 
-    odrv1.axis0.controller.config.vel_gain = 0.02
-    odrv1.axis1.controller.config.vel_gain = 0.02
+    odrv0.axis0.controller.config.vel_gain = vel_gain
+    odrv0.axis1.controller.config.vel_gain = vel_gain
+    odrv1.axis0.controller.config.vel_gain = vel_gain
+    odrv1.axis1.controller.config.vel_gain = vel_gain
 
-    odrv0.axis0.controller.config.vel_limit = 100
-    odrv0.axis1.controller.config.vel_limit = 100
+    odrv0.axis0.controller.config.vel_limit = vel_limit
+    odrv0.axis1.controller.config.vel_limit = vel_limit
 
-    odrv1.axis0.controller.config.vel_limit = 200
-    odrv1.axis1.controller.config.vel_limit = 200
+    odrv1.axis0.controller.config.vel_limit = vel_limit
+    odrv1.axis1.controller.config.vel_limit = vel_limit
 
-    odrv0.axis0.controller.config.pos_gain = 2
-    odrv0.axis1.controller.config.pos_gain = 2
+    odrv0.axis0.controller.config.pos_gain = pos_gain
+    odrv0.axis1.controller.config.pos_gain = pos_gain
 
-    odrv1.axis0.controller.config.pos_gain = 2
-    odrv1.axis1.controller.config.pos_gain = 2
+    odrv1.axis0.controller.config.pos_gain = pos_gain
+    odrv1.axis1.controller.config.pos_gain = pos_gain
 
-    odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
-    odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
+    odrv0.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
+    odrv0.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
 
-    odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
-    odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
+    odrv1.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
+    odrv1.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
 
-    odrv1.axis0.motor.config.current_lim = 14  # Example current limit in Amps
-    odrv1.axis1.motor.config.current_lim = 14  # Example current limit in Amps
-
-    odrv1.axis0.motor.config.calibration_current = 14
-    odrv1.axis1.motor.config.calibration_current = 14
+    odrv1.axis0.motor.config.current_lim = current_lim
+    odrv1.axis1.motor.config.current_lim = current_lim
+    odrv1.axis0.motor.config.calibration_current = calibration_current
+    odrv1.axis1.motor.config.calibration_current = calibration_current
 
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     odrv0.clear_errors() 

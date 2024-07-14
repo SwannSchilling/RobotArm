@@ -130,19 +130,7 @@ if odrive_1 :
 #
 # exit()
 
-def liveplot():
-        start_liveplotter(lambda: [
-            odrv1.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
-            odrv1.axis1.encoder.pos_estimate,              # Position estimate of axis1
-            odrv1.axis1.controller.pos_setpoint            # Position setpoint of axis1
-        ])
-
-    # Start the live plotter
-    # liveplot()
-
-
 while True:
-    #liveplot()
     value = int(input("enter position: "))
     odrv1.axis1.controller.input_pos = value
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)

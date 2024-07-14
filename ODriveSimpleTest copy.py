@@ -12,6 +12,12 @@ axis_0_0 = False
 axis_0_1 = False
 axis_1_0 = False
 axis_1_1 = True
+
+vel_limit = 50
+vel_gain = 0.01
+pos_gain = 1
+input_filter_bandwidth = 0.1
+
 # Find a connected ODrive (this will block until you connect one)
 print("finding an odrive...")
 if not odrive_0 and not odrive_1:
@@ -28,29 +34,29 @@ if odrive_0:
     print("odrive_0 found")
     odrv0 = odrive.find_any(serial_number="2088399B4D4D")
     if axis_0_0:
-        odrv0.axis0.controller.config.vel_limit = 100
-        odrv0.axis0.controller.config.vel_gain = 0.02
-        odrv0.axis0.controller.config.pos_gain = 2
-        odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
+        odrv0.axis0.controller.config.vel_limit = vel_limit
+        odrv0.axis0.controller.config.vel_gain = vel_gain
+        odrv0.axis0.controller.config.pos_gain = pos_gain
+        odrv0.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
     if axis_0_1:
-        odrv0.axis1.controller.config.vel_limit = 100
-        odrv0.axis1.controller.config.vel_gain = 0.02
-        odrv0.axis1.controller.config.pos_gain = 2
-        odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
+        odrv0.axis1.controller.config.vel_limit = vel_limit
+        odrv0.axis1.controller.config.vel_gain = vel_gain
+        odrv0.axis1.controller.config.pos_gain = pos_gain
+        odrv0.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
 
 if odrive_1:
     print("odrive_1 found")
     odrv1 = odrive.find_any(serial_number="2068399D4D4D")
     if axis_1_0:
-        odrv1.axis0.controller.config.vel_limit = 100
-        odrv1.axis0.controller.config.vel_gain = 0.02
-        odrv1.axis0.controller.config.pos_gain = 2
-        odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
+        odrv1.axis0.controller.config.vel_limit = vel_limit
+        odrv1.axis0.controller.config.vel_gain = vel_gain
+        odrv1.axis0.controller.config.pos_gain = pos_gain
+        odrv1.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
     if axis_1_1:
-        odrv1.axis1.controller.config.vel_limit = 100
-        odrv1.axis1.controller.config.vel_gain = 0.02
-        odrv1.axis1.controller.config.pos_gain = 2
-        odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
+        odrv1.axis1.controller.config.vel_limit = vel_limit
+        odrv1.axis1.controller.config.vel_gain = vel_gain
+        odrv1.axis1.controller.config.pos_gain = pos_gain
+        odrv1.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
 
 # Find an ODrive that is connected on the serial port /dev/ttyUSB0
 #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
