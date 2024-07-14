@@ -12,17 +12,13 @@ import threading
 import logging
 import odrive.utils
 
-# Suppress default logging of HTTP requests
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = True
-SPM = True
-Gripper = True
-SPM_Gripper = True
+SPM = False
+Gripper = False
+SPM_Gripper = False
 
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
@@ -73,7 +69,7 @@ for device in device_list:
                 '{:04X}'.format(device.pid) == PID):
                 port = device.device
                 print(port)
-                break
+                breakodrv0.clear_errors() 
             port = None """
 
 if SPM_Gripper == True:
@@ -134,8 +130,8 @@ axis_3 = 0
 
 vel_limit = 100
 vel_gain = 0.02
-pos_gain = 2
-input_filter_bandwidth = 0.1
+pos_gain = 3
+input_filter_bandwidth = 0.2
 
 current_lim = 5
 calibration_current = 5
@@ -153,8 +149,8 @@ if ODrive == True:
     odrv0 = odrive.find_any(serial_number="2088399B4D4D")
     odrv1 = odrive.find_any(serial_number="2068399D4D4D")
 
-    #odrv0.clear_errors()
-    #odrv1.clear_errors()
+    odrv0.clear_errors()
+    odrv1.clear_errors()
 
     # Find an ODrive that is connected on the serial port /dev/ttyUSB0
     #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
@@ -197,11 +193,6 @@ if ODrive == True:
     odrv1.axis0.motor.config.calibration_current = calibration_current
     odrv1.axis1.motor.config.calibration_current = calibration_current
 
-    errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
-    odrv0.clear_errors() 
-    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
-    odrv1.clear_errors()
-
     # Calibrate motor and wait for it to finish
     print("starting calibration...")
     # odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
@@ -227,6 +218,11 @@ if ODrive == True:
     #odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+    errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
+    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+    odrv0.clear_errors() 
+    odrv1.clear_errors()
 
     #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
     #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
@@ -362,16 +358,21 @@ def set_positions(position):
         odrive_states = {}
 
         if ODrive:
-            global start_moving
+            global start_moving, last_position_change_time, idle_flag, position_changed_flag
             if start_moving:
                 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                 odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                # Suppress default logging of HTTP requests
+                log = logging.getLogger('werkzeug')
+                log.setLevel(logging.ERROR)
                 start_moving = False
+                idle_flag = False
+                position_changed_flag = False
 
             global axis_0, axis_1, axis_2, axis_3
-    
+            
             new_positions = [Base_Rotation_norm, LowerHinge_Rotation_norm, UpperHinge_Rotation_norm, EndEffector_Rotation_norm]
             position_changed = False
 
@@ -389,7 +390,10 @@ def set_positions(position):
                     last_odrive_positions[i] = new_pos
 
             if position_changed:
-                print("At least one motor position has changed")
+                if not position_changed_flag:
+                    print("At least one motor position has changed")
+                    position_changed_flag = True
+                    idle_flag = False
                 last_position_change_time = current_time
 
                 # Set all motors to CLOSED_LOOP_CONTROL if they are currently in IDLE state
@@ -410,7 +414,10 @@ def set_positions(position):
                 odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
 
             elif current_time - last_position_change_time > idle_timeout:
-                print("No motor positions have changed for timeout duration")
+                if not idle_flag:
+                    print("No motor positions have changed for timeout duration")
+                    idle_flag = True
+                    position_changed_flag = False
                 # Set all motors to IDLE
                 odrv1.axis1.requested_state = AXIS_STATE_IDLE
                 odrv1.axis0.requested_state = AXIS_STATE_IDLE
@@ -422,6 +429,7 @@ def set_positions(position):
             odrive_states['axis0'] = odrv1.axis0.current_state
             odrive_states['axis3'] = odrv0.axis1.current_state
             odrive_states['axis2'] = odrv0.axis0.current_state
+
 
         if SPM == True:
             UpperRing = 5*(float(motorPositions[0])+30)

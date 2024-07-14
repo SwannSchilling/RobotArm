@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 import odrive
 from odrive.enums import *
+import odrive.utils
 from odrive.utils import start_liveplotter
 import time
 import serial
 from time import sleep
-import odrive.utils
+
 
 print(odrive.__version__)
-odrive_0 = False
+odrive_0 = True
 odrive_1 = True
 # Find a connected ODrive (this will block until you connect one)
 print("finding an odrive...")
@@ -45,7 +46,6 @@ if odrive_1:
     odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
-    import odrive.utils
 
     odrv1.axis0.motor.config.current_lim = 5   # Example current limit in Amps
     odrv1.axis1.motor.config.current_lim = 5  # Example current limit in Amps
@@ -53,7 +53,6 @@ if odrive_1:
     odrv1.axis0.motor.config.calibration_current = 5
     odrv1.axis1.motor.config.calibration_current = 5
         
-    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
 
     # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
     # odrv0.axis1.controller.config.current_lim = 30  # Example current limit in Amps
@@ -89,9 +88,12 @@ if odrive_1:
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
 
+    errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
+    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+    odrv0.clear_errors()
     odrv1.clear_errors()
     #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
 #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
@@ -127,15 +129,13 @@ if odrive_1 :
 # odrv_dict = {0: odrv0.axis0.controller, 1: odrv0.axis1.controller, 
 #              2: odrv1.axis0.controller, 3: odrv1.axis1.controller}
 
-#
-# exit()
 
 while True:
     value = int(input("enter position: "))
     odrv1.axis1.controller.input_pos = value
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
     odrv1.clear_errors()
-#    axis = int(input("enter axis: "))#
+#    axis = int(input("enter axis: "))
 #
 #    if axis in odrv_dict:
 #        odrv_dict[axis].input_pos = value
