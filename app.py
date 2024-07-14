@@ -178,6 +178,11 @@ if ODrive == True:
     odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
+    odrv1.axis0.motor.config.calibration_current = 20
+    odrv1.axis1.motor.config.calibration_current = 20
+
+    odrv1.axis0.motor.config.current_lim = 20
+    odrv1.axis1.motor.config.current_lim = 20
 
     # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
     # odrv0.axis1.controller.config.current_lim = 30  # Example current limit in Amps
