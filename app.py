@@ -132,9 +132,9 @@ axis_1 = 0
 axis_2 = 0
 axis_3 = 0
 
-vel_limit = 50
-vel_gain = 0.01
-pos_gain = 1
+vel_limit = 100
+vel_gain = 0.02
+pos_gain = 2
 input_filter_bandwidth = 0.1
 
 current_lim = 5
