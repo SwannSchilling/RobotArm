@@ -348,46 +348,58 @@ def set_positions(position):
         odrive_states = {}
 
         if ODrive:
-            global axis_0, axis_1, axis_2, axis_3
+    global axis_0, axis_1, axis_2, axis_3
+    
+    new_positions = [Base_Rotation_norm, LowerHinge_Rotation_norm, UpperHinge_Rotation_norm, EndEffector_Rotation_norm]
+    position_changed = False
 
-            new_positions = [Base_Rotation_norm, LowerHinge_Rotation_norm, UpperHinge_Rotation_norm, EndEffector_Rotation_norm]
-            position_changed = False
+    # Track the previous states of each axis
+    previous_states = {
+        'axis1': odrv1.axis1.current_state,
+        'axis0': odrv1.axis0.current_state,
+        'axis3': odrv0.axis1.current_state,
+        'axis2': odrv0.axis0.current_state
+    }
 
-            for i, (new_pos, last_pos) in enumerate(zip(new_positions, last_odrive_positions)):
-                if abs(new_pos - last_pos) > idle_threshold:
-                    position_changed = True
-                    last_odrive_positions[i] = new_pos
-                    
-            if position_changed:
-                print("At least one motor position has changed")
-                last_position_change_time = current_time
-                
-                # Set all motors to CLOSED_LOOP_CONTROL and update positions
-                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
-                
-                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
-                
-                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
-                
-                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
-            
-            elif current_time - last_position_change_time > idle_timeout:
-                print("No motor positions have changed for timeout duration")
-                # Set all motors to IDLE
-                odrv1.axis1.requested_state = AXIS_STATE_IDLE
-                odrv1.axis0.requested_state = AXIS_STATE_IDLE
-                odrv0.axis1.requested_state = AXIS_STATE_IDLE
-                odrv0.axis0.requested_state = AXIS_STATE_IDLE
+    for i, (new_pos, last_pos) in enumerate(zip(new_positions, last_odrive_positions)):
+        if abs(new_pos - last_pos) > idle_threshold:
+            position_changed = True
+            last_odrive_positions[i] = new_pos
 
-            # Get the states of the ODrive axes
-            odrive_states['axis1'] = odrv1.axis1.current_state
-            odrive_states['axis0'] = odrv1.axis0.current_state
-            odrive_states['axis3'] = odrv0.axis1.current_state
-            odrive_states['axis2'] = odrv0.axis0.current_state
+    if position_changed:
+        print("At least one motor position has changed")
+        last_position_change_time = current_time
+
+        # Set all motors to CLOSED_LOOP_CONTROL if they are currently in IDLE state
+        if previous_states['axis1'] == AXIS_STATE_IDLE:
+            odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
+
+        if previous_states['axis0'] == AXIS_STATE_IDLE:
+            odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
+
+        if previous_states['axis3'] == AXIS_STATE_IDLE:
+            odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
+
+        if previous_states['axis2'] == AXIS_STATE_IDLE:
+            odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
+
+    elif current_time - last_position_change_time > idle_timeout:
+        print("No motor positions have changed for timeout duration")
+        # Set all motors to IDLE
+        odrv1.axis1.requested_state = AXIS_STATE_IDLE
+        odrv1.axis0.requested_state = AXIS_STATE_IDLE
+        odrv0.axis1.requested_state = AXIS_STATE_IDLE
+        odrv0.axis0.requested_state = AXIS_STATE_IDLE
+
+    # Get the states of the ODrive axes
+    odrive_states['axis1'] = odrv1.axis1.current_state
+    odrive_states['axis0'] = odrv1.axis0.current_state
+    odrive_states['axis3'] = odrv0.axis1.current_state
+    odrive_states['axis2'] = odrv0.axis0.current_state
 
         if SPM == True:
             UpperRing = 5*(float(motorPositions[0])+30)
