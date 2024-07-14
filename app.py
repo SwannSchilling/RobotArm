@@ -10,6 +10,7 @@ import math
 from time import sleep
 import threading
 import logging
+import odrive.utils
 
 # Suppress default logging of HTTP requests
 log = logging.getLogger('werkzeug')
@@ -28,6 +29,8 @@ last_odrive_positions = [float('-inf')] * 4
 last_position_change_time = [0] * 4  # Track the last time each motor's position changed
 idle_timeout = 10.0  # Time in seconds after which to idle the motor if position hasn't changed
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
+
+start_moving = True
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -137,10 +140,14 @@ def scale(val, src, dst):
     return ((val - src[0]) / (src[1]-src[0])) * (dst[1]-dst[0]) + dst[0]
 
 if ODrive == True:
+
     # Find a connected ODrive (this will block until you connect one)
     print("finding an odrive...")
     odrv0 = odrive.find_any(serial_number="2088399B4D4D")
     odrv1 = odrive.find_any(serial_number="2068399D4D4D")
+
+    #odrv0.clear_errors()
+    #odrv1.clear_errors()
 
     # Find an ODrive that is connected on the serial port /dev/ttyUSB0
     #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
@@ -178,15 +185,16 @@ if ODrive == True:
     odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
-    # odrv1.axis0.motor.config.calibration_current = 20
-    # odrv1.axis1.motor.config.calibration_current = 20
+    odrv1.axis0.motor.config.current_lim = 14  # Example current limit in Amps
+    odrv1.axis1.motor.config.current_lim = 14  # Example current limit in Amps
 
-    # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
-    # odrv0.axis1.controller.config.current_lim = 30  # Example current limit in Amps
+    odrv1.axis0.motor.config.calibration_current = 14
+    odrv1.axis1.motor.config.calibration_current = 14
 
-    # odrv1.axis0.controller.config.current_lim = 30  # Example current limit in Amps
-    # odrv1.axis1.controller.config.current_lim = 30  # Example current limit in Amps
-    
+    errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
+    odrv0.clear_errors() 
+    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+    odrv1.clear_errors()
 
     # Calibrate motor and wait for it to finish
     print("starting calibration...")
@@ -209,10 +217,10 @@ if ODrive == True:
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
 
-    odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
     #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
     #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
@@ -348,6 +356,14 @@ def set_positions(position):
         odrive_states = {}
 
         if ODrive:
+            global start_moving
+            if start_moving:
+                odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                start_moving = False
+
             global axis_0, axis_1, axis_2, axis_3
     
             new_positions = [Base_Rotation_norm, LowerHinge_Rotation_norm, UpperHinge_Rotation_norm, EndEffector_Rotation_norm]
@@ -466,7 +482,7 @@ def check_errors():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/clear_errors', methods=['POST'])
+@app.route('/clear_errors', methods=['GET'])
 def clear_errors():
     try:
         odrv0.clear_errors()

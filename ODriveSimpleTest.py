@@ -44,6 +44,22 @@ if odrive_1:
     odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
+    import odrive.utils
+
+    odrv1.axis0.motor.config.current_lim = 15  # Example current limit in Amps
+    odrv1.axis1.motor.config.current_lim = 15  # Example current limit in Amps
+
+    odrv1.axis0.motor.config.calibration_current = 15
+    odrv1.axis1.motor.config.calibration_current = 15
+        
+    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+
+    # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
+    # odrv0.axis1.controller.config.current_lim = 30  # Example current limit in Amps
+
+    # odrv1.axis0.controller.config.current_lim = 30  # Example current limit in Amps
+    # odrv1.axis1.controller.config.current_lim = 30  # Example current limit in Amps
+
 # Find an ODrive that is connected on the serial port /dev/ttyUSB0
 #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
 
@@ -71,8 +87,10 @@ if odrive_1:
         time.sleep(0.1)
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
-    odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+    odrv1.clear_errors()
+    #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
 #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
@@ -107,6 +125,8 @@ if odrive_1 :
 
 # odrv_dict = {0: odrv0.axis0.controller, 1: odrv0.axis1.controller, 
 #              2: odrv1.axis0.controller, 3: odrv1.axis1.controller}
+
+exit()
 
 while True:
     value = int(input("enter position: "))
