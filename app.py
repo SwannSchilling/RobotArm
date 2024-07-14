@@ -16,9 +16,9 @@ last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = True
-SPM = False
-Gripper = False
-SPM_Gripper = False
+SPM = True
+Gripper = True
+SPM_Gripper = True
 
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
