@@ -157,8 +157,8 @@ if ODrive == True:
     odrv0.axis0.controller.config.vel_gain = 0.01
     odrv0.axis1.controller.config.vel_gain = 0.01
 
-    odrv1.axis0.controller.config.vel_gain = 0.01
-    odrv1.axis1.controller.config.vel_gain = 0.01
+    odrv1.axis0.controller.config.vel_gain = 0.02
+    odrv1.axis1.controller.config.vel_gain = 0.02
 
     odrv0.axis0.controller.config.vel_limit = 100
     odrv0.axis1.controller.config.vel_limit = 100
@@ -438,40 +438,16 @@ def set_positions(position):
 @app.route('/check_errors', methods=['GET'])
 def check_errors():
     try:
-        # Assuming odrv0 and odrv1 are your ODrive objects
-        errors = {
-            'odrv0': {
-                'axis0': {
-                    'active_errors': odrv0.axis0.error,
-                    'disarm_reason': odrv0.axis0.disarm_reason,
-                    'procedure_result': odrv0.axis0.procedure_result,
-                    'last_drv_fault': odrv0.axis0.last_drv_fault
-                },
-                'axis1': {
-                    'active_errors': odrv0.axis1.error,
-                    'disarm_reason': odrv0.axis1.disarm_reason,
-                    'procedure_result': odrv0.axis1.procedure_result,
-                    'last_drv_fault': odrv0.axis1.last_drv_fault
-                },
-                'issues': odrv0.issues
-            },
-            'odrv1': {
-                'axis0': {
-                    'active_errors': odrv1.axis0.error,
-                    'disarm_reason': odrv1.axis0.disarm_reason,
-                    'procedure_result': odrv1.axis0.procedure_result,
-                    'last_drv_fault': odrv1.axis0.last_drv_fault
-                },
-                'axis1': {
-                    'active_errors': odrv1.axis1.error,
-                    'disarm_reason': odrv1.axis1.disarm_reason,
-                    'procedure_result': odrv1.axis1.procedure_result,
-                    'last_drv_fault': odrv1.axis1.last_drv_fault
-                },
-                'issues': odrv1.issues
-            }
-        }
-        return jsonify(errors), 200
+        # Assuming you have access to odrivetool's dump_errors function
+        import odrive.utils
+        
+        errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
+        errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+
+        return jsonify({
+            "odrv0_errors": errors_odrv0,
+            "odrv1_errors": errors_odrv1
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -485,6 +461,7 @@ def clear_errors():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/get_positions', methods=['GET'])
 def get_positions():
