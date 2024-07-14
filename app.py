@@ -157,8 +157,8 @@ if ODrive == True:
     odrv0.axis0.controller.config.vel_gain = 0.01
     odrv0.axis1.controller.config.vel_gain = 0.01
 
-    odrv1.axis0.controller.config.vel_gain = 0.02
-    odrv1.axis1.controller.config.vel_gain = 0.02
+    odrv1.axis0.controller.config.vel_gain = 0.01
+    odrv1.axis1.controller.config.vel_gain = 0.01
 
     odrv0.axis0.controller.config.vel_limit = 100
     odrv0.axis1.controller.config.vel_limit = 100
@@ -169,14 +169,14 @@ if ODrive == True:
     odrv0.axis0.controller.config.pos_gain = 2
     odrv0.axis1.controller.config.pos_gain = 2
 
-    odrv1.axis0.controller.config.pos_gain = 3
-    odrv1.axis1.controller.config.pos_gain = 3
+    odrv1.axis0.controller.config.pos_gain = 2
+    odrv1.axis1.controller.config.pos_gain = 2
 
     odrv0.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv0.axis1.controller.config.input_filter_bandwidth = 0.1
 
-    odrv1.axis0.controller.config.input_filter_bandwidth = 0.2
-    odrv1.axis1.controller.config.input_filter_bandwidth = 0.2
+    odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
+    odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
 
     # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
@@ -348,60 +348,39 @@ def set_positions(position):
         if ODrive:
             global axis_0, axis_1, axis_2, axis_3
 
-            print(f"Base_Rotation_norm: {Base_Rotation_norm}, last: {last_odrive_positions[0]}")
-            print(f"LowerHinge_Rotation_norm: {LowerHinge_Rotation_norm}, last: {last_odrive_positions[1]}")
-            print(f"UpperHinge_Rotation_norm: {UpperHinge_Rotation_norm}, last: {last_odrive_positions[2]}")
-            print(f"EndEffector_Rotation_norm: {EndEffector_Rotation_norm}, last: {last_odrive_positions[3]}")
+            new_positions = [Base_Rotation_norm, LowerHinge_Rotation_norm, UpperHinge_Rotation_norm, EndEffector_Rotation_norm]
+            position_changed = False
 
-            # Base Rotation
-            if abs(Base_Rotation_norm - last_odrive_positions[0]) > idle_threshold:
-                print("Base rotation has changed")
+            for i, (new_pos, last_pos) in enumerate(zip(new_positions, last_odrive_positions)):
+                if abs(new_pos - last_pos) > idle_threshold:
+                    position_changed = True
+                    last_odrive_positions[i] = new_pos
+                    
+            if position_changed:
+                print("At least one motor position has changed")
+                last_position_change_time = current_time
+                
+                # Set all motors to CLOSED_LOOP_CONTROL and update positions
                 odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv1.axis1.controller.input_pos = Base_Rotation_norm + axis_0
-                last_odrive_positions[0] = Base_Rotation_norm
-                last_position_change_time[0] = current_time
-            elif current_time - last_position_change_time[0] > idle_timeout:
-                print("Base rotation has not changed for timeout duration")
-                odrv1.axis1.requested_state = AXIS_STATE_IDLE
-
-            # Lower Hinge Rotation
-            if abs(LowerHinge_Rotation_norm - last_odrive_positions[1]) > idle_threshold:
-                print("Lower hinge rotation has changed")
+                odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
+                
                 odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv1.axis0.controller.input_pos = LowerHinge_Rotation_norm + axis_1
-                last_odrive_positions[1] = LowerHinge_Rotation_norm
-                last_position_change_time[1] = current_time
-            elif current_time - last_position_change_time[1] > idle_timeout:
-                print("Lower hinge rotation has not changed for timeout duration")
-                odrv1.axis0.requested_state = AXIS_STATE_IDLE
-
-            # Upper Hinge Rotation
-            if abs(UpperHinge_Rotation_norm - last_odrive_positions[2]) > idle_threshold:
-                print("Upper hinge rotation has changed")
+                odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
+                
                 odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv0.axis1.controller.input_pos = UpperHinge_Rotation_norm + axis_2
-                last_odrive_positions[2] = UpperHinge_Rotation_norm
-                last_position_change_time[2] = current_time
-            elif current_time - last_position_change_time[2] > idle_timeout:
-                print("Upper hinge rotation has not changed for timeout duration")
-                odrv0.axis1.requested_state = AXIS_STATE_IDLE
-
-            # End Effector Rotation
-            if abs(EndEffector_Rotation_norm - last_odrive_positions[3]) > idle_threshold:
-                print("End effector rotation has changed")
+                odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
+                
                 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                odrv0.axis0.controller.input_pos = EndEffector_Rotation_norm + axis_3
-                last_odrive_positions[3] = EndEffector_Rotation_norm
-                last_position_change_time[3] = current_time
-            elif current_time - last_position_change_time[3] > idle_timeout:
-                print("End effector rotation has not changed for timeout duration")
+                odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
+            
+            elif current_time - last_position_change_time > idle_timeout:
+                print("No motor positions have changed for timeout duration")
+                # Set all motors to IDLE
+                odrv1.axis1.requested_state = AXIS_STATE_IDLE
+                odrv1.axis0.requested_state = AXIS_STATE_IDLE
+                odrv0.axis1.requested_state = AXIS_STATE_IDLE
                 odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
-            # Get the states of the ODrive axes
-            odrive_states['axis1'] = odrv1.axis1.current_state
-            odrive_states['axis0'] = odrv1.axis0.current_state
-            odrive_states['axis3'] = odrv0.axis1.current_state
-            odrive_states['axis2'] = odrv0.axis0.current_state
             # Get the states of the ODrive axes
             odrive_states['axis1'] = odrv1.axis1.current_state
             odrive_states['axis0'] = odrv1.axis0.current_state
@@ -455,6 +434,57 @@ def set_positions(position):
         "motor_positions": motorPositions,
         "odrive_states": odrive_states
     })
+
+@app.route('/check_errors', methods=['GET'])
+def check_errors():
+    try:
+        # Assuming odrv0 and odrv1 are your ODrive objects
+        errors = {
+            'odrv0': {
+                'axis0': {
+                    'active_errors': odrv0.axis0.error,
+                    'disarm_reason': odrv0.axis0.disarm_reason,
+                    'procedure_result': odrv0.axis0.procedure_result,
+                    'last_drv_fault': odrv0.axis0.last_drv_fault
+                },
+                'axis1': {
+                    'active_errors': odrv0.axis1.error,
+                    'disarm_reason': odrv0.axis1.disarm_reason,
+                    'procedure_result': odrv0.axis1.procedure_result,
+                    'last_drv_fault': odrv0.axis1.last_drv_fault
+                },
+                'issues': odrv0.issues
+            },
+            'odrv1': {
+                'axis0': {
+                    'active_errors': odrv1.axis0.error,
+                    'disarm_reason': odrv1.axis0.disarm_reason,
+                    'procedure_result': odrv1.axis0.procedure_result,
+                    'last_drv_fault': odrv1.axis0.last_drv_fault
+                },
+                'axis1': {
+                    'active_errors': odrv1.axis1.error,
+                    'disarm_reason': odrv1.axis1.disarm_reason,
+                    'procedure_result': odrv1.axis1.procedure_result,
+                    'last_drv_fault': odrv1.axis1.last_drv_fault
+                },
+                'issues': odrv1.issues
+            }
+        }
+        return jsonify(errors), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/clear_errors', methods=['POST'])
+def clear_errors():
+    try:
+        odrv0.clear_errors()
+        odrv1.clear_errors()
+        return jsonify({"status": "errors_cleared"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/get_positions', methods=['GET'])
 def get_positions():
