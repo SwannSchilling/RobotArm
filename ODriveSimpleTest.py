@@ -5,6 +5,7 @@ from odrive.utils import start_liveplotter
 import time
 import serial
 from time import sleep
+import odrive.utils
 
 print(odrive.__version__)
 odrive_0 = False
@@ -36,21 +37,21 @@ if odrive_1:
     fw_revision = odrv1.fw_version_revision
     print(str(fw_major)+"."+str(fw_minor)+"."+str(fw_revision  ))
     odrv1.axis0.controller.config.vel_limit = 100
-    odrv1.axis1.controller.config.vel_limit = 100
+    odrv1.axis1.controller.config.vel_limit = 50
     odrv1.axis0.controller.config.vel_gain = 0.02
-    odrv1.axis1.controller.config.vel_gain = 0.02
+    odrv1.axis1.controller.config.vel_gain = 0.01
     odrv1.axis0.controller.config.pos_gain = 2
-    odrv1.axis1.controller.config.pos_gain = 2
+    odrv1.axis1.controller.config.pos_gain = 1
     odrv1.axis0.controller.config.input_filter_bandwidth = 0.1
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
     import odrive.utils
 
-    odrv1.axis0.motor.config.current_lim = 15  # Example current limit in Amps
-    odrv1.axis1.motor.config.current_lim = 15  # Example current limit in Amps
+    odrv1.axis0.motor.config.current_lim = 5   # Example current limit in Amps
+    odrv1.axis1.motor.config.current_lim = 5  # Example current limit in Amps
 
-    odrv1.axis0.motor.config.calibration_current = 15
-    odrv1.axis1.motor.config.calibration_current = 15
+    odrv1.axis0.motor.config.calibration_current = 5
+    odrv1.axis1.motor.config.calibration_current = 5
         
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
 
@@ -90,7 +91,7 @@ if odrive_1:
 
     odrv1.clear_errors()
     #odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    #odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
 #start_liveplotter(lambda:[odrv1.axis0.encoder.pos_estimate, odrv1.axis0.controller.pos_setpoint,odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
@@ -126,17 +127,33 @@ if odrive_1 :
 # odrv_dict = {0: odrv0.axis0.controller, 1: odrv0.axis1.controller, 
 #              2: odrv1.axis0.controller, 3: odrv1.axis1.controller}
 
-exit()
+#
+# exit()
+
+def liveplot():
+        start_liveplotter(lambda: [
+            odrv1.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
+            odrv1.axis1.encoder.pos_estimate,              # Position estimate of axis1
+            odrv1.axis1.controller.pos_setpoint            # Position setpoint of axis1
+        ])
+
+    # Start the live plotter
+    # liveplot()
+
 
 while True:
+    #liveplot()
     value = int(input("enter position: "))
-    axis = int(input("enter axis: "))
-
-    if axis in odrv_dict:
-        odrv_dict[axis].input_pos = value
-    else:
-        print("Invalid axis. Please enter a value between 0 and 3.")
-        break
+    odrv1.axis1.controller.input_pos = value
+    errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+    odrv1.clear_errors()
+#    axis = int(input("enter axis: "))#
+#
+#    if axis in odrv_dict:
+#        odrv_dict[axis].input_pos = value
+#    else:
+#        print("Invalid axis. Please enter a value between 0 and 3.")
+#        break
 
 # while True:
 #     value = input("Enter position: ")
