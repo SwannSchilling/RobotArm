@@ -1,0 +1,218 @@
+I_bus_hard_max: inf (float)
+I_bus_hard_min: -inf (float)
+I_leak_max: 0.10000000149011612 (float)
+R_wL_FF_enable: False (bool)
+acim_autoflux_attack_gain: 10.0 (float)
+acim_autoflux_decay_gain: 1.0 (float)
+acim_autoflux_enable: False (bool)
+acim_autoflux_min_Id: 10.0 (float)
+acim_gain_min_flux: 10.0 (float)
+bEMF_FF_enable: False (bool)
+calibration_current: 10.0 (float)
+current_control_bandwidth: 1000.0 (float)
+current_lim: 10.0 (float)
+current_lim_margin: 8.0 (float)
+dc_calib_tau: 0.20000000298023224 (float)
+inverter_temp_limit_lower: 100.0 (float)
+inverter_temp_limit_upper: 120.0 (float)
+motor_type: 0 (uint8)
+phase_inductance: 2.9130453185644e-05 (float)
+phase_resistance: 0.2528989613056183 (float)
+pole_pairs: 11 (int32)
+pre_calibrated: False (bool)
+requested_current_range: 60.0 (float)
+resistance_calib_max_voltage: 4.0 (float)
+torque_constant: 0.021763157099485397 (float)
+torque_lim: inf (float)
+
+anticogging:
+  anticogging_enabled: True (bool)
+  calib_anticogging: False (bool)
+  calib_pos_threshold: 1.0 (float)
+  calib_vel_threshold: 1.0 (float)
+  cogging_ratio: 1.0 (float)
+  index: 0 (uint32)
+  pre_calibrated: False (bool)
+axis_to_mirror: 255 (uint8)
+circular_setpoint_range: 1.0 (float)
+circular_setpoints: False (bool)
+control_mode: 3 (uint8)
+electrical_power_bandwidth: 20.0 (float)
+enable_gain_scheduling: False (bool)
+enable_overspeed_error: True (bool)
+enable_torque_mode_vel_limit: True (bool)
+enable_vel_limit: True (bool)
+gain_scheduling_width: 10.0 (float)
+homing_speed: 0.25 (float)
+inertia: 0.0 (float)
+input_filter_bandwidth: 2.0 (float)
+input_mode: 1 (uint8)
+load_encoder_axis: 0 (uint8)
+mechanical_power_bandwidth: 20.0 (float)
+mirror_ratio: 1.0 (float)
+pos_gain: 5.0 (float)
+spinout_electrical_power_threshold: 10.0 (float)
+spinout_mechanical_power_threshold: -10.0 (float)
+steps_per_circular_range: 1024 (int32)
+torque_mirror_ratio: 0.0 (float)
+torque_ramp_rate: 0.009999999776482582 (float)
+vel_gain: 0.009999999776482582 (float)
+vel_integrator_gain: 0.3333333432674408 (float)
+vel_integrator_limit: inf (float)
+vel_limit: 30.0 (float)
+vel_limit_tolerance: 1.2000000476837158 (float)
+vel_ramp_rate: 1.0 (float)
+
+axis0:
+  acim_estimator: ...
+  config: ...
+  controller: ...
+  current_state: 1 (uint8)
+  encoder: ...
+  error: 0 (uint32)
+  is_homed: False (bool)
+  last_drv_fault: 0 (uint32)
+  max_endstop: ...
+  mechanical_brake: ...
+  min_endstop: ...
+  motor: ...
+  requested_state: 0 (uint8)
+  sensorless_estimator: ...
+  step_dir_active: False (bool)
+  steps: 0 (int64)
+  task_times: ...
+  trap_traj: ...
+  watchdog_feed(obj: object_ref)
+axis1:
+  acim_estimator: ...
+  config: ...
+  controller: ...
+  current_state: 1 (uint8)
+  encoder: ...
+  error: 0 (uint32)
+  is_homed: False (bool)
+  last_drv_fault: 0 (uint32)
+  max_endstop: ...
+  mechanical_brake: ...
+  min_endstop: ...
+  motor: ...
+  requested_state: 0 (uint8)
+  sensorless_estimator: ...
+  step_dir_active: False (bool)
+  steps: 0 (int64)
+  task_times: ...
+  trap_traj: ...
+  watchdog_feed(obj: object_ref)
+brake_resistor_armed: True (bool)
+brake_resistor_current: -0.0 (float)
+brake_resistor_saturated: False (bool)
+can:
+  config: ...
+  error: 0 (uint8)
+clear_errors(obj: object_ref)
+config:
+  brake_resistance: 2.0 (float)
+  dc_bus_overvoltage_ramp_end: 59.92000198364258 (float)
+  dc_bus_overvoltage_ramp_start: 59.92000198364258 (float)
+  dc_bus_overvoltage_trip_level: 59.92000198364258 (float)
+  dc_bus_undervoltage_trip_level: 8.0 (float)
+  dc_max_negative_current: -0.009999999776482582 (float)
+  dc_max_positive_current: inf (float)
+  enable_brake_resistor: True (bool)
+  enable_can_a: True (bool)
+  enable_dc_bus_overvoltage_ramp: False (bool)
+  enable_i2c_a: False (bool)
+  enable_uart_a: True (bool)
+  enable_uart_b: False (bool)
+  enable_uart_c: False (bool)
+  error_gpio_pin: 0 (uint32)
+  gpio10_mode: 11 (uint8)
+  gpio11_mode: 2 (uint8)
+  gpio12_mode: 12 (uint8)
+  gpio13_mode: 12 (uint8)
+  gpio14_mode: 2 (uint8)
+  gpio15_mode: 7 (uint8)
+  gpio16_mode: 7 (uint8)
+  gpio1_mode: 4 (uint8)
+  gpio1_pwm_mapping: ...
+  gpio2_mode: 4 (uint8)
+  gpio2_pwm_mapping: ...
+  gpio3_analog_mapping: ...
+  gpio3_mode: 3 (uint8)
+  gpio3_pwm_mapping: ...
+  gpio4_analog_mapping: ...
+  gpio4_mode: 3 (uint8)
+  gpio4_pwm_mapping: ...
+  gpio5_mode: 3 (uint8)
+  gpio6_mode: 0 (uint8)
+  gpio7_mode: 0 (uint8)
+  gpio8_mode: 0 (uint8)
+  gpio9_mode: 11 (uint8)
+  max_regen_current: 0.0 (float)
+  uart0_protocol: 3 (uint8)
+  uart1_protocol: 3 (uint8)
+  uart2_protocol: 3 (uint8)
+  uart_a_baudrate: 115200 (uint32)
+  uart_b_baudrate: 115200 (uint32)
+  uart_c_baudrate: 115200 (uint32)
+  usb_cdc_protocol: 3 (uint8)
+enter_dfu_mode(obj: object_ref)
+erase_configuration(obj: object_ref)
+error: 0 (uint8)
+fw_version_major: 0 (uint8)
+fw_version_minor: 5 (uint8)
+fw_version_revision: 4 (uint8)
+fw_version_unreleased: 0 (uint8)
+get_adc_voltage(obj: object_ref, gpio: uint32) -> voltage: float
+get_dma_status(obj: object_ref, stream_num: uint8) -> status: uint32
+get_drv_fault(obj: object_ref) -> drv_fault: uint64
+get_gpio_states(obj: object_ref) -> status: uint32
+get_interrupt_status(obj: object_ref, irqn: int32) -> status: uint32
+hw_version_major: 3 (uint8)
+hw_version_minor: 6 (uint8)
+hw_version_variant: 56 (uint8)
+ibus: 0.0 (float)
+ibus_report_filter_k: 1.0 (float)
+misconfigured: False (bool)
+n_evt_control_loop: 3601489 (uint32)
+n_evt_sampling: 3601497 (uint32)
+oscilloscope:
+  get_val(obj: object_ref, index: uint32) -> val: float
+  size: 4096 (uint32)
+otp_valid: True (bool)
+reboot(obj: object_ref)
+save_configuration(obj: object_ref) -> success: bool
+serial_number: 35632015297869 (uint64)
+system_stats:
+  i2c: ...
+  max_stack_usage_analog: 308 (uint32)
+  max_stack_usage_axis: 408 (uint32)
+  max_stack_usage_can: 216 (uint32)
+  max_stack_usage_startup: 524 (uint32)
+  max_stack_usage_uart: 284 (uint32)
+  max_stack_usage_usb: 484 (uint32)
+  min_heap_space: 47432 (uint32)
+  prio_analog: -2 (int32)
+  prio_axis: 3 (int32)
+  prio_can: 0 (int32)
+  prio_startup: 0 (int32)
+  prio_uart: 0 (int32)
+  prio_usb: 0 (int32)
+  stack_size_analog: 1024 (uint32)
+  stack_size_axis: 2048 (uint32)
+  stack_size_can: 1024 (uint32)
+  stack_size_startup: 2048 (uint32)
+  stack_size_uart: 4096 (uint32)
+  stack_size_usb: 4096 (uint32)
+  uptime: 450317 (uint32)
+  usb: ...
+task_timers_armed: False (bool)
+task_times:
+  control_loop_checks: ...
+  control_loop_misc: ...
+  dc_calib_wait: ...
+  sampling: ...
+test_function(obj: object_ref, delta: int32) -> cnt: int32
+test_property: 0 (uint32)
+user_config_loaded: 30262 (uint32)
+vbus_voltage: 24.155420303344727 (float)

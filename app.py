@@ -133,8 +133,8 @@ vel_gain = 0.02
 pos_gain = 3
 input_filter_bandwidth = 0.2
 
-current_lim = 5
-calibration_current = 5
+current_lim = 8
+calibration_current = 8
 
 def scale(val, src, dst):
     """
