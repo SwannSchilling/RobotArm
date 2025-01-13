@@ -10,7 +10,7 @@ from time import sleep
 
 print(odrive.__version__)
 odrive_0 = True
-odrive_1 = False
+odrive_1 = True
 # Find a connected ODrive (this will block until you connect one)
 print("finding an odrive...")
 
