@@ -143,17 +143,16 @@ def scale(val, src, dst):
     return ((val - src[0]) / (src[1]-src[0])) * (dst[1]-dst[0]) + dst[0]
 
 if ODrive == True:
+    print("finding an odrive...")
+    # Find an ODrive that is connected on the serial port /dev/ttyUSB0
+    # my_drive = odrive.find_any("serial:/dev/ttyUSB3")
 
     # Find a connected ODrive (this will block until you connect one)
-    print("finding an odrive...")
     odrv0 = odrive.find_any(serial_number="2088399B4D4D")
     odrv1 = odrive.find_any(serial_number="2068399D4D4D")
 
     odrv0.clear_errors()
     odrv1.clear_errors()
-
-    # Find an ODrive that is connected on the serial port /dev/ttyUSB0
-    #my_drive = odrive.find_any("serial:/dev/ttyUSB0")
 
     odrv0.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
     odrv0.axis1.controller.config.vel_integrator_gain = 0.3333333432674408
@@ -357,8 +356,8 @@ def set_positions(position):
 
         # Normalize the positions
         # Updated for new gearboxes
-        Base_Rotation_norm = round((Base_Rotation / 360) * 50, 3)
-        LowerHinge_Rotation_norm = round((LowerHinge_Rotation / 360) * 50, 3)
+        Base_Rotation_norm = round((-Base_Rotation / 360) * 50, 3)  # Invert direction
+        LowerHinge_Rotation_norm = round((-LowerHinge_Rotation / 360) * 50, 3)  # Invert direction
         UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
         EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
 
@@ -561,3 +560,5 @@ if __name__ == '__main__':
     # python app.py
 
     # it only works in terminal and it has to be flask run --host=0.0.0.0
+    # or on Linux
+    # sudo flask run --host=0.0.0.0
