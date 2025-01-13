@@ -9,7 +9,7 @@ from time import sleep
 
 
 print(odrive.__version__)
-odrive_0 = True
+odrive_0 = False
 odrive_1 = True
 # Find a connected ODrive (this will block until you connect one)
 print("finding an odrive...")
@@ -47,11 +47,11 @@ if odrive_1:
     odrv1.axis1.controller.config.input_filter_bandwidth = 0.1
 
 
-    odrv1.axis0.motor.config.current_lim = 5   # Example current limit in Amps
-    odrv1.axis1.motor.config.current_lim = 5  # Example current limit in Amps
-
-    odrv1.axis0.motor.config.calibration_current = 5
-    odrv1.axis1.motor.config.calibration_current = 5
+    # odrv1.axis0.motor.config.current_lim = 5   # Example current limit in Amps
+    # odrv1.axis1.motor.config.current_lim = 5  # Example current limit in Amps
+    
+    # odrv1.axis0.motor.config.calibration_current = 5
+    # odrv1.axis1.motor.config.calibration_current = 5
         
 
     # odrv0.axis0.controller.config.current_lim = 30  # Example current limit in Amps
