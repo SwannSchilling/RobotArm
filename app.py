@@ -194,10 +194,10 @@ if ODrive == True:
 
     # Calibrate motor and wait for it to finish
     print("starting calibration...")
-    odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
 
     odrv0.axis0.requested_state = INPUT_MODE_POS_FILTER
     odrv0.axis1.requested_state = INPUT_MODE_POS_FILTER
