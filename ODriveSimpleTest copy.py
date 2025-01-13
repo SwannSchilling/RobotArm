@@ -20,8 +20,15 @@ axis_1_1 = False
 sensorless = False
 
 vel_limit = 50
-vel_gain = 0.01
+# pos_gain [(turn/s) / turn]:
 pos_gain = 1
+# vel_gain [Nm/(turn/s)]:
+vel_gain = 0.01
+# vel_integrator_gain [Nm/((turn/s) * s)]:
+vel_integrator_gain = 0.5 * 10 * vel_gain
+
+odrv0.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
+
 input_filter_bandwidth = 0.1
 torque_constant = 0.021763157099485397
 
@@ -162,13 +169,14 @@ if odrive_1 :
 
 while True:
     value = int(input("enter position: "))
-    axis = int(input("enter axis: "))
+    odrv0.axis0.controller.input_pos = value
+    # axis = int(input("enter axis: "))
 
-    if axis in odrv_dict:
-        odrv_dict[axis].input_pos = value
-    else:
-        print("Invalid axis. Please enter a value between 0 and 3.")
-        break
+    # if axis in odrv_dict:
+    #     odrv_dict[axis].input_pos = value
+    # else:
+    #     print("Invalid axis. Please enter a value between 0 and 3.")
+    #     break
 
 # while True:
 #     value = input("Enter position: ")

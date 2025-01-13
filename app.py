@@ -350,8 +350,15 @@ def set_positions(position):
         #     # counter(motorPositions)
 
         # Normalize the positions
-        Base_Rotation_norm = round((Base_Rotation / 360) * 40, 3)
-        LowerHinge_Rotation_norm = round((LowerHinge_Rotation / 360) * 40, 3)
+        # Base_Rotation_norm = round((Base_Rotation / 360) * 40, 3)
+        # LowerHinge_Rotation_norm = round((LowerHinge_Rotation / 360) * 40, 3)
+        # UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
+        # EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
+
+        # Normalize the positions
+        # Updated for new gearboxes
+        Base_Rotation_norm = round((Base_Rotation / 360) * 50, 3)
+        LowerHinge_Rotation_norm = round((LowerHinge_Rotation / 360) * 50, 3)
         UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
         EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
 
