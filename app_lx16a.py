@@ -11,17 +11,52 @@ from time import sleep
 import threading
 import logging
 import odrive.utils
+import lewansoul_lx16a
+from lewansoul_lx16a import ServoController
+import serial.tools.list_ports
+import platform
+
+def list_serial_ports_with_details():
+    ports = serial.tools.list_ports.comports()
+
+    for port in ports:
+        print(f"Device: {port.device}")
+        print(f"Description: {port.description}")
+        print(f"Hardware ID: {port.hwid}")
+        print(f"Location: {port.location}")
+        print(f"Manufacturer: {port.manufacturer}")
+        print(f"Product: {port.product}")
+        print(f"Interface: {port.interface}")
+
+        if platform.system() == "Windows":
+            try:
+                import wmi
+                c = wmi.WMI()
+                for usb in c.Win32_USBControllerDevice():
+                    if usb.Dependent.DeviceID == port.hwid:
+                        print(f"USB Device ID: {usb.Dependent.DeviceID}")
+                        print(f"USB Antecedent: {usb.Antecedent.DeviceID}")
+            except ImportError:
+                print("wmi library not installed. Install with pip install WMI.")
+
+        print("-" * 40)
+
+# list_serial_ports_with_details()
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = False
-SPM = False
-Gripper = False
 SPM_Gripper = False
+Gripper = False
+SPM = False
+LX16a = True
+Endeffector = True # for the end effector turn on SPM or LX16a
 
-collect_data = True
+# Declare global variables for servo controllers
+collect_data = False
 collect_position_data = ""
+
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
 last_position_change_time = [0] * 4  # Track the last time each motor's position changed
@@ -29,6 +64,24 @@ idle_timeout = 10.0  # Time in seconds after which to idle the motor if position
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 start_moving = True
+
+def close_all_serial_ports():
+    # List all available serial ports
+    ports = serial.tools.list_ports.comports()
+
+    for port in ports:
+        try:
+            # Attempt to open and then close the port
+            with serial.Serial(port.device, 9600, timeout=1) as ser:
+                print(f'Closing port: {port.device}')
+        except serial.SerialException as e:
+            print(f'Could not close port {port.device}: {e}')
+
+# Call the function to close all serial ports
+close_all_serial_ports()
+
+# The serial ports are being looked up, its a bit messy but it works
+# It needs to be cleaned up in the future
 
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
@@ -91,7 +144,48 @@ if SPM_Gripper == True:
         connected = False
         exit()
 
-time.sleep(2)
+def find_serial_device_by_vid_pid(vid_pid):
+    vid, pid = vid_pid.split(':')
+    print(f'Searching for device with VID: {vid} and PID: {pid}')
+
+    for port in serial.tools.list_ports.comports():
+        # print(f'Found port: {port.device}, VID: {port.vid}, PID: {port.pid}')
+        if port.vid is not None and port.pid is not None:
+            if f'{port.vid:04x}' == vid and f'{port.pid:04x}' == pid:
+                return port.device
+
+    return None
+
+if LX16a:
+    try:
+        LX16a_port = find_serial_device('1A86:7523')
+        if LX16a_port:
+            print(f'Found SPM port: {LX16a_port}')
+        else:
+            print('No Device Found With Given ID.')
+            exit()
+    except Exception as e:
+        print(f'Error finding serial device: {e}')
+        exit()
+
+if Endeffector:
+    try:
+        controller = lewansoul_lx16a.ServoController(serial.Serial(LX16a_port, 115200, timeout=1))
+        UpperRing_LX16a = controller.servo(3)
+        print(f'UpperRing_LX16a initialized with ID: {UpperRing_LX16a.servo_id}')
+        MiddleRing_LX16a = controller.servo(2)
+        print(f'MiddleRing_LX16a initialized with ID: {MiddleRing_LX16a.servo_id}')
+        LowerRing_LX16a = controller.servo(1)
+        print(f'LowerRing_LX16a initialized with ID: {LowerRing_LX16a.servo_id}')
+        print('Servos initialized successfully.')
+        UpperRing_LX16a.move(500)
+        MiddleRing_LX16a.move(500)
+        LowerRing_LX16a.move(500)
+        print('Servos initialized successfully.')
+
+    except serial.SerialException as e:
+        print(f'Failed to initialize servos: {e}')
+        exit()
 
 # motorPositions = 'c1\r\n'
 
@@ -143,6 +237,44 @@ def scale(val, src, dst):
     Scale the given value from the scale of src to the scale of dst.
     """
     return ((val - src[0]) / (src[1]-src[0])) * (dst[1]-dst[0]) + dst[0]
+
+def clamp_rotation(rotation_degrees, min_degrees=-120, max_degrees=120):
+    """
+    Clamp rotation values to the specified range.
+    
+    Args:
+        rotation_degrees (float): Rotation value in degrees (-180 to 180)
+        min_degrees (float): Minimum allowed degrees (default: -120)
+        max_degrees (float): Maximum allowed degrees (default: 120)
+        
+    Returns:
+        float: Clamped rotation value in degrees
+    """
+    return max(min_degrees, min(rotation_degrees, max_degrees))
+
+def degrees_to_servo_position(degrees, min_degrees=-120, max_degrees=120, min_pos=0, max_pos=1000):
+    """
+    Convert clamped rotation degrees to servo position.
+    
+    Args:
+        degrees (float): Rotation value in degrees
+        min_degrees (float): Minimum rotation in degrees (default: -120)
+        max_degrees (float): Maximum rotation in degrees (default: 120)
+        min_pos (int): Minimum servo position (default: 0)
+        max_pos (int): Maximum servo position (default: 1000)
+        
+    Returns:
+        int: Servo position value
+    """
+    # First clamp the degrees to ensure it's within range
+    clamped_degrees = clamp_rotation(degrees, min_degrees, max_degrees)
+    
+    # Map the clamped degrees to servo position
+    normalized_position = (clamped_degrees - min_degrees) / (max_degrees - min_degrees)
+    servo_position = min_pos + normalized_position * (max_pos - min_pos)
+    
+    # Return as integer since servo positions are typically whole numbers
+    return int(servo_position)
 
 if ODrive == True:
     print("finding an odrive...")
@@ -322,7 +454,7 @@ def set_positions(position):
         global collect_position_data
         collect_position_data = position
         return json.dumps(position)
-        
+    
     global last_update_time, last_odrive_positions, last_position_change_time
     current_time = time.time()
     
@@ -369,8 +501,8 @@ def set_positions(position):
 
         # Normalize the positions
         # Updated for new gearboxes
-        Base_Rotation_norm = round((-Base_Rotation / 360) * 50, 3)  # Invert direction
-        LowerHinge_Rotation_norm = round((-LowerHinge_Rotation / 360) * 50, 3)  # Invert direction
+        Base_Rotation_norm = round((-Base_Rotation / 360) * 50, 3)  # Invert direction and update gear ratio to match the new gearbox
+        LowerHinge_Rotation_norm = round((-LowerHinge_Rotation / 360) * 50, 3)  # Invert direction and update gear ratio to match the new gearbox
         UpperHinge_Rotation_norm = round((UpperHinge_Rotation / 360) * 40, 3)
         EndEffector_Rotation_norm = round((EndEffector_Rotation / 360) * 40, 3)
 
@@ -450,25 +582,42 @@ def set_positions(position):
             odrive_states['axis2'] = odrv0.axis0.current_state
 
 
-        if SPM == True:
-            UpperRing = 5*(float(motorPositions[0])+30)
-            MiddleRing = 5*(float(motorPositions[1])+60)
-            LowerRing = 5*(float(motorPositions[2]))
-            # UpperRing = 25*(float(motorPositions[2]))
-            # MiddleRing = 25*(float(motorPositions[1]))
-            # LowerRing = 25*(float(motorPositions[0]))
-            UpperRing = round((math.radians(UpperRing)),10)
-            MiddleRing = round((math.radians(MiddleRing)), 10)
-            LowerRing = round((math.radians(LowerRing)), 10)
-            UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
-            # print(UpperRing_Rotation)
-            serial_SPM.write(UpperRing_Rotation.encode())
-            MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
-            # print(MiddleRing_Rotation)
-            serial_SPM.write(MiddleRing_Rotation.encode())
-            LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
-            # print(LowerRing_Rotation)
-            serial_SPM.write(LowerRing_Rotation.encode())
+        if Endeffector == True:
+            if SPM == True:
+                UpperRing = 5*(float(motorPositions[0])+30)
+                MiddleRing = 5*(float(motorPositions[1])+60)
+                LowerRing = 5*(float(motorPositions[2]))
+                UpperRing = round((math.radians(UpperRing)),10)
+                MiddleRing = round((math.radians(MiddleRing)), 10)
+                LowerRing = round((math.radians(LowerRing)), 10)
+                UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
+                # print(UpperRing_Rotation)
+                serial_SPM.write(UpperRing_Rotation.encode())
+                MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
+                # print(MiddleRing_Rotation)
+                serial_SPM.write(MiddleRing_Rotation.encode())
+                LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
+                # print(LowerRing_Rotation)
+                serial_SPM.write(LowerRing_Rotation.encode())
+
+            if LX16a == True:
+                # Map angles to the servo range and calculate corresponding positions
+                UpperRing_angle = float(motorPositions[0]) + 30  # Adjust base offset
+                MiddleRing_angle = float(motorPositions[1]) + 60 # Adjust base offset
+                LowerRing_angle = float(motorPositions[2])       # No offset
+
+                # Convert angles to servo position values (0 to 1000)
+                UpperRing = degrees_to_servo_position(-UpperRing_angle * 4)  # Inverted
+                MiddleRing = degrees_to_servo_position(-MiddleRing_angle * 4)  # Inverted
+                LowerRing = degrees_to_servo_position(-LowerRing_angle * 4)  # Inverted
+
+                UpperRing_LX16a.move(UpperRing)
+                MiddleRing_LX16a.move(MiddleRing)
+                LowerRing_LX16a.move(LowerRing)
+                # UpperRing_LX16a.move_prepare(UpperRing)
+                # MiddleRing_LX16a.move_prepare(MiddleRing)
+                # LowerRing_LX16a.move_prepare(LowerRing)
+                # controller.move_start()
 
         if Gripper == True:
             if not serial_Gripper.is_open:
