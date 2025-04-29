@@ -42,6 +42,7 @@ def list_serial_ports_with_details():
         print("-" * 40)
 
 # list_serial_ports_with_details()
+# exit()
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
@@ -50,11 +51,11 @@ ODrive = False
 SPM_Gripper = False
 Gripper = False
 SPM = False
-LX16a = True
-Endeffector = True # for the end effector turn on SPM or LX16a
+LX16a = False
+Endeffector = False # for the end effector turn on SPM or LX16a
 
 # Declare global variables for servo controllers
-collect_data = False
+collect_data = True
 collect_position_data = ""
 
 # Initialize last positions and timeouts
