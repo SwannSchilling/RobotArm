@@ -18,7 +18,7 @@ update_interval = 0.1  # Minimum interval between updates in seconds
 ODrive = False
 SPM = False
 Gripper = False
-SPM_Gripper = False
+SPM_Gripper = False  
 
 collect_data = True
 collect_position_data = ""
@@ -318,6 +318,7 @@ def return_positions():
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
+    print(position)
     if collect_data:
         global collect_position_data
         collect_position_data = position
