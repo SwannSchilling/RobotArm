@@ -13,14 +13,13 @@ import time
 import requests
 import sys
 import math 
+import socket
 
-
-ODrive = True  # Set to False if not using ODrive
+ODrive = False  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
 SPM = False  # Set to False if not using Storm32
 # Arduino Nano (only if Gripper is True)
 Gripper = False  # Set to False if not using Gripper
-
 # Temperature threshold in Celsius to set 🔥 WARNING: Overheat!
 TEMP_THRESHOLD = 30.0
 
@@ -32,6 +31,22 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 
 start_moving = True
 position = ''
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't have to be reachable, just used to get local IP
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+
+    print(f"\n💻 Flask server should be accessible at http://{ip}:5000 \n")
+    return ip
+
+get_ip_address()
 
 # Device finder function
 def find_device(vid, pid):
@@ -65,6 +80,8 @@ if SPM:
             print(f"❌ Failed to open Storm32 serial port: {e}")
     else:
         print("❌ Storm32 BGC not found.")
+else:
+    print("❌ Not connecting to the Storm32 BGC this time...")
 
 if Gripper:
     if nano_port:
@@ -76,7 +93,10 @@ if Gripper:
             print(f"❌ Failed to open Arduino Nano serial port: {e}")
     else:
         print("❌ Arduino Nano not found.")
+else:
+    print("❌ Not connecting to the Gripper this time...")
 
+# Initialize variables      
 counter_num = 0
 stored_positions = [0,0,0]
 
@@ -221,7 +241,7 @@ if ODrive == True:
     # liveplot()
 
 else:
-    print("not connecting to the Odrive this time...")
+    print("❌ Not connecting to the Odrive this time...")
 
 time.sleep(2)  # Wait for the Pico to reset
 
@@ -231,7 +251,7 @@ print("Reading temperature for safety shutdown... 🔥🔥🔥\n")
 running_event = threading.Event()
 running_event.set()
 
-TEMP_THRESHOLD = 30
+# TEMP_THRESHOLD = 30
 
 def read_serial():
     while running_event.is_set():
@@ -479,162 +499,160 @@ sys.exit()
 
 exit()
 
-print("\nStarting the robot arm!")
-print("Reading temperature for safety shutdown... 🔥🔥🔥\n")
+# print("\nStarting the robot arm!")
+# print("Reading temperature for safety shutdown... 🔥🔥🔥\n")
 
-running_event = threading.Event()
-running_event.set()
+# running_event = threading.Event()
+# running_event.set()
 
-TEMP_THRESHOLD = 30
+# TEMP_THRESHOLD = 30
 
-def read_serial():
-    while running_event.is_set():
-        try:
-            line = serial_Pico.readline().decode("utf-8").strip()
-            if line:
-                try:
-                    temp_c, _ = map(float, line.split(","))
-                    print(f"Temp: {temp_c:.2f} °C", end='')
-                    if temp_c > TEMP_THRESHOLD:
-                        print("  🔥 WARNING: Overheat!")
-                        shutdown_motors()
-                        running_event.clear()
-                        break  # Exit cleanly after overheat
-                    else:
-                        print()
-                except ValueError:
-                    print("⚠️ Malformed line:", line)
-        except Exception as e:
-            print(f"Serial read error: {e}")
-            break
+# def read_serial():
+#     while running_event.is_set():
+#         try:
+#             line = serial_Pico.readline().decode("utf-8").strip()
+#             if line:
+#                 try:
+#                     temp_c, _ = map(float, line.split(","))
+#                     print(f"Temp: {temp_c:.2f} °C", end='')
+#                     if temp_c > TEMP_THRESHOLD:
+#                         print("  🔥 WARNING: Overheat!")
+#                         shutdown_motors()
+#                         running_event.clear()
+#                         break  # Exit cleanly after overheat
+#                     else:
+#                         print()
+#                 except ValueError:
+#                     print("⚠️ Malformed line:", line)
+#         except Exception as e:
+#             print(f"Serial read error: {e}")
+#             break
 
-def poll_flask():
-    while running_event.is_set():
-        try:
-            url = 'http://127.0.0.1:5000/return_positions'
-            response = requests.get(url, timeout=0.5)
-            print(f'Response body: {response.text}')
-        except requests.exceptions.Timeout:
-            print("Request timeout.")
-        except Exception as e:
-            print(f"Error contacting server: {e}")
+# def poll_flask():
+#     while running_event.is_set():
+#         try:
+#             url = 'http://127.0.0.1:5000/return_positions'
+#             response = requests.get(url, timeout=0.5)
+#             print(f'Response body: {response.text}')
+#         except requests.exceptions.Timeout:
+#             print("Request timeout.")
+#         except Exception as e:
+#             print(f"Error contacting server: {e}")
         
-        # This will return immediately if the event is cleared
-        if not running_event.wait(timeout=0.05):
-            break
+#         # This will return immediately if the event is cleared
+#         if not running_event.wait(timeout=0.05):
+#             break
 
-def shutdown_motors():
-    print("Shutting down motors...")
-    try:
-        odrv1.axis1.requested_state = AXIS_STATE_IDLE
-        odrv1.axis0.requested_state = AXIS_STATE_IDLE
-        odrv0.axis1.requested_state = AXIS_STATE_IDLE
-        odrv0.axis0.requested_state = AXIS_STATE_IDLE
-    except Exception as e:
-        print(f"Error during motor shutdown: {e}")
+# def shutdown_motors():
+#     print("Shutting down motors...")
+#     try:
+#         odrv1.axis1.requested_state = AXIS_STATE_IDLE
+#         odrv1.axis0.requested_state = AXIS_STATE_IDLE
+#         odrv0.axis1.requested_state = AXIS_STATE_IDLE
+#         odrv0.axis0.requested_state = AXIS_STATE_IDLE
+#     except Exception as e:
+#         print(f"Error during motor shutdown: {e}")
 
-# Create and start threads
-serial_thread = threading.Thread(target=read_serial, name="SerialReader")
-flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
+# # Create and start threads
+# serial_thread = threading.Thread(target=read_serial, name="SerialReader")
+# flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
 
-# Don't use daemon threads - we want controlled shutdown
-serial_thread.start()
-flask_thread.start()
+# # Don't use daemon threads - we want controlled shutdown
+# serial_thread.start()
+# flask_thread.start()
 
-try:
-    # Wait for either thread to finish or event to be cleared
-    while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
-        time.sleep(0.1)
+# try:
+#     # Wait for either thread to finish or event to be cleared
+#     while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
+#         time.sleep(0.1)
     
-    # If we get here due to overheat, wait a moment for both threads to finish cleanly
-    if not running_event.is_set():
-        print("Waiting for threads to finish...")
-        serial_thread.join(timeout=1.0)
-        flask_thread.join(timeout=1.0)
+#     # If we get here due to overheat, wait a moment for both threads to finish cleanly
+#     if not running_event.is_set():
+#         print("Waiting for threads to finish...")
+#         serial_thread.join(timeout=1.0)
+#         flask_thread.join(timeout=1.0)
         
-except KeyboardInterrupt:
-    print("\nUser interruption. Stopping...")
-    running_event.clear()
-    shutdown_motors()
+# except KeyboardInterrupt:
+#     print("\nUser interruption. Stopping...")
+#     running_event.clear()
+#     shutdown_motors()
 
-# Final cleanup - wait for threads to finish
-serial_thread.join(timeout=2.0)
-flask_thread.join(timeout=2.0)
+# # Final cleanup - wait for threads to finish
+# serial_thread.join(timeout=2.0)
+# flask_thread.join(timeout=2.0)
 
-print("System stopped.")
-sys.exit()
+# print("System stopped.")
+# sys.exit()
 
-exit()
-print("\nStarting the robot arm!")
-print("Reading temperature for safety shutdown... 🔥🔥🔥\n")
+# exit()
+# print("\nStarting the robot arm!")
+# print("Reading temperature for safety shutdown... 🔥🔥🔥\n")
 
-running_event = threading.Event()
-running_event.set()
+# running_event = threading.Event()
+# running_event.set()
 
-TEMP_THRESHOLD = 30  # Example
+# def read_serial():
+#     while running_event.is_set():
+#         line = serial_Pico.readline().decode("utf-8").strip()
+#         if line:
+#             try:
+#                 temp_c, _ = map(float, line.split(","))
+#                 print(f"Temp: {temp_c:.2f} °C", end='')
+#                 if temp_c > TEMP_THRESHOLD:
+#                     print("  🔥 WARNING: Overheat!")
+#                     shutdown_motors()
+#                     running_event.clear()
+#                 else:
+#                     print()
+#             except ValueError:
+#                 print("⚠️ Malformed line:", line)
 
-def read_serial():
-    while running_event.is_set():
-        line = serial_Pico.readline().decode("utf-8").strip()
-        if line:
-            try:
-                temp_c, _ = map(float, line.split(","))
-                print(f"Temp: {temp_c:.2f} °C", end='')
-                if temp_c > TEMP_THRESHOLD:
-                    print("  🔥 WARNING: Overheat!")
-                    shutdown_motors()
-                    running_event.clear()
-                else:
-                    print()
-            except ValueError:
-                print("⚠️ Malformed line:", line)
-
-def poll_flask():
-    while running_event.is_set():
-        try:
-            url = f'http://127.0.0.1:5000/return_positions'
-            response = requests.get(url, timeout=0.5)
-            print(f'Response body: {response.text}')
-        except requests.exceptions.Timeout:
-            print("Request timeout.")
-        except Exception as e:
-            print(f"Error contacting server: {e}")
+# def poll_flask():
+#     while running_event.is_set():
+#         try:
+#             url = f'http://127.0.0.1:5000/return_positions'
+#             response = requests.get(url, timeout=0.5)
+#             print(f'Response body: {response.text}')
+#         except requests.exceptions.Timeout:
+#             print("Request timeout.")
+#         except Exception as e:
+#             print(f"Error contacting server: {e}")
         
-        # Use running_event.wait() with timeout instead of sleep loop
-        # This will return immediately if the event is cleared
-        if not running_event.wait(timeout=0.05):  # 50ms timeout
-            break  # Event was cleared, exit immediately
+#         # Use running_event.wait() with timeout instead of sleep loop
+#         # This will return immediately if the event is cleared
+#         if not running_event.wait(timeout=0.05):  # 50ms timeout
+#             break  # Event was cleared, exit immediately
 
-def shutdown_motors():
-    print("Shutting down motors...")
-    odrv1.axis1.requested_state = AXIS_STATE_IDLE
-    odrv1.axis0.requested_state = AXIS_STATE_IDLE
-    odrv0.axis1.requested_state = AXIS_STATE_IDLE
-    odrv0.axis0.requested_state = AXIS_STATE_IDLE
+# def shutdown_motors():
+#     print("Shutting down motors...")
+#     odrv1.axis1.requested_state = AXIS_STATE_IDLE
+#     odrv1.axis0.requested_state = AXIS_STATE_IDLE
+#     odrv0.axis1.requested_state = AXIS_STATE_IDLE
+#     odrv0.axis0.requested_state = AXIS_STATE_IDLE
 
-serial_thread = threading.Thread(target=read_serial)
-serial_thread.daemon = True # Set as daemon
+# serial_thread = threading.Thread(target=read_serial)
+# serial_thread.daemon = True # Set as daemon
 
-flask_thread = threading.Thread(target=poll_flask)
-flask_thread.daemon = True # Set as daemon
+# flask_thread = threading.Thread(target=poll_flask)
+# flask_thread.daemon = True # Set as daemon
 
-serial_thread.start()
-flask_thread.start()
+# serial_thread.start()
+# flask_thread.start()
 
-try:
-    # Your main loop no longer needs to check the event itself.
-    # It just needs to keep the program alive.
-    # The .join() with a timeout is a robust way to do this.
-    while serial_thread.is_alive() and flask_thread.is_alive():
-        serial_thread.join(timeout=0.1)
-        flask_thread.join(timeout=0.1)
-except KeyboardInterrupt:
-    print("\nUser interruption. Stopping...")
-    running_event.clear()
+# try:
+#     # Your main loop no longer needs to check the event itself.
+#     # It just needs to keep the program alive.
+#     # The .join() with a timeout is a robust way to do this.
+#     while serial_thread.is_alive() and flask_thread.is_alive():
+#         serial_thread.join(timeout=0.1)
+#         flask_thread.join(timeout=0.1)
+# except KeyboardInterrupt:
+#     print("\nUser interruption. Stopping...")
+#     running_event.clear()
 
-# With daemon threads, the .join() calls are no longer strictly necessary
-# for shutdown, but it's good practice to wait briefly for them.
-# The main point is that when this 'try...except' block ends, the program WILL exit.
+# # With daemon threads, the .join() calls are no longer strictly necessary
+# # for shutdown, but it's good practice to wait briefly for them.
+# # The main point is that when this 'try...except' block ends, the program WILL exit.
 
-print("System stopped.")
-sys.exit()
+# print("System stopped.")
+# sys.exit()

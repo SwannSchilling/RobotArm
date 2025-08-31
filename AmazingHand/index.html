@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Hand Poses</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .servo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .servo-control {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .servo-control:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .servo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .servo-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .servo-value {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #495057;
+            min-width: 70px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .slider:hover {
+            background: #bbb;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 0 3px 15px rgba(102, 126, 234, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.7);
+        }
+        
+        .controls-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .input-group input {
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .output-panel {
+            background: #2c3e50;
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .output-panel h3 {
+            margin-bottom: 15px;
+            color: #ecf0f1;
+            font-size: 1.3em;
+        }
+        
+        .output-content {
+            background: #34495e;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .status-bar {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #c3e6cb;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .servo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .input-group input {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦾 Set Hand Poses</h1>
+        
+        <div class="status-bar" id="statusBar">
+            💡 Note: Run "python -m http.server 8000" in terminal, then open http://localhost:8000
+        </div>
+        
+        <div class="servo-grid" id="servoGrid"></div>
+        
+        <div class="controls-panel">
+            <div class="controls-row">
+                <div class="input-group">
+                    <label for="arrayName">Array Name:</label>
+                    <input type="text" id="arrayName" value="pose_1" placeholder="e.g. open_hand, close_grip, pose_1">
+                </div>
+                <button class="btn btn-primary" onclick="controller.generateArray()">Generate Array</button>
+                <button class="btn btn-secondary" onclick="controller.connectSerial()">Connect to Hardware</button>
+            </div>
+        </div>
+        
+        <div class="output-panel">
+            <h3>📋 Generated Arrays</h3>
+            <div id="outputContent" class="output-content">Position servos and click "Generate Array" to create your pose data...</div>
+        </div>
+    </div>
+
+    <script>
+        class SimpleServoController {
+            constructor() {
+                this.numServos = 8;
+                this.servoPositions = Array(this.numServos).fill(90);
+                this.isConnected = false;
+                this.serialPort = null;
+                this.writer = null;
+                this.generatedArrays = [];
+                
+                this.initializeUI();
+            }
+            
+            initializeUI() {
+                const servoGrid = document.getElementById('servoGrid');
+                
+                for (let i = 0; i < this.numServos; i++) {
+                    const servoControl = this.createServoControl(i);
+                    servoGrid.appendChild(servoControl);
+                }
+            }
+            
+            createServoControl(servoId) {
+                const control = document.createElement('div');
+                control.className = 'servo-control';
+                control.innerHTML = `
+                    <div class="servo-header">
+                        <h3 class="servo-title">Servo ${servoId}</h3>
+                        <div id="value${servoId}" class="servo-value">90°</div>
+                    </div>
+                    <input type="range" id="slider${servoId}" class="slider" min="0" max="180" value="90">
+                `;
+                
+                // Add event listener
+                setTimeout(() => {
+                    const slider = document.getElementById(`slider${servoId}`);
+                    const valueDisplay = document.getElementById(`value${servoId}`);
+                    
+                    slider.addEventListener('input', (e) => {
+                        const angle = parseInt(e.target.value);
+                        this.servoPositions[servoId] = angle;
+                        valueDisplay.textContent = `${angle}°`;
+                        this.sendServoCommand(servoId, angle);
+                    });
+                }, 0);
+                
+                return control;
+            }
+            
+            async connectSerial() {
+                try {
+                    if (!('serial' in navigator)) {
+                        throw new Error('Web Serial API not supported. Please use Chrome or Edge browser.');
+                    }
+                    
+                    if (this.isConnected) {
+                        await this.disconnectSerial();
+                        return;
+                    }
+                    
+                    this.serialPort = await navigator.serial.requestPort();
+                    await this.serialPort.open({ 
+                        baudRate: 115200,
+                        dataBits: 8,
+                        stopBits: 1,
+                        parity: 'none'
+                    });
+                    
+                    this.writer = this.serialPort.writable.getWriter();
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Arduino reset delay
+                    
+                    this.isConnected = true;
+                    this.updateStatus('Connected to hardware - servos will move in real-time!', 'success');
+                    document.querySelector('.btn-secondary').textContent = 'Disconnect';
+                    
+                } catch (error) {
+                    this.updateStatus(`Connection failed: ${error.message}`, 'error');
+                }
+            }
+            
+            async disconnectSerial() {
+                try {
+                    if (this.writer) {
+                        await this.writer.close();
+                        this.writer = null;
+                    }
+                    
+                    if (this.serialPort) {
+                        await this.serialPort.close();
+                        this.serialPort = null;
+                    }
+                    
+                    this.isConnected = false;
+                    this.updateStatus('Disconnected from hardware', 'info');
+                    document.querySelector('.btn-secondary').textContent = 'Connect to Hardware';
+                    
+                } catch (error) {
+                    this.updateStatus(`Disconnect error: ${error.message}`, 'error');
+                }
+            }
+            
+            async sendServoCommand(servoId, angle) {
+                if (this.isConnected && this.writer) {
+                    try {
+                        const command = `SERVO,${servoId},${angle}\n`;
+                        const encoder = new TextEncoder();
+                        const data = encoder.encode(command);
+                        
+                        await this.writer.write(data);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        
+                    } catch (error) {
+                        console.error('Serial write error:', error);
+                    }
+                }
+            }
+            
+            generateArray() {
+                const arrayName = document.getElementById('arrayName').value.trim() || `pose_${this.generatedArrays.length + 1}`;
+                const positions = [...this.servoPositions];
+                const timestamp = new Date().toLocaleString();
+                
+                // Store the array
+                this.generatedArrays.push({ name: arrayName, positions, timestamp });
+                
+                // Generate output
+                const arrayOutput = `${arrayName} = [${positions.join(', ')}]  # Generated at ${timestamp}`;
+                
+                // Update output display
+                const outputContent = document.getElementById('outputContent');
+                const currentContent = outputContent.textContent;
+                
+                if (currentContent === "Position servos and click \"Generate Array\" to create your pose data...") {
+                    outputContent.textContent = arrayOutput;
+                } else {
+                    outputContent.textContent = `${currentContent}\n${arrayOutput}`;
+                }
+                
+                outputContent.scrollTop = outputContent.scrollHeight;
+                
+                // Update status
+                this.updateStatus(`Generated array: ${arrayName}`, 'success');
+                
+                // Auto-increment array name for next use
+                const match = arrayName.match(/(\w+?)_?(\d+)$/);
+                if (match) {
+                    const base = match[1];
+                    const num = parseInt(match[2]) + 1;
+                    document.getElementById('arrayName').value = `${base}_${num}`;
+                } else {
+                    document.getElementById('arrayName').value = `${arrayName}_2`;
+                }
+                
+                // Generate Python script if we have multiple arrays
+                this.generatePythonScript();
+            }
+            
+            generatePythonScript() {
+                if (this.generatedArrays.length === 0) return;
+                
+                let pythonScript = `#!/usr/bin/env python3
+"""
+Auto-generated servo position script
+Generated at: ${new Date().toLocaleString()}
+"""
+
+import time
+import serial
+
+class ServoController:
+    def __init__(self, serial_port="COM11", baudrate=115200):
+        self.serial = serial.Serial(serial_port, baudrate, timeout=0.5)
+        time.sleep(2)  # Wait for Arduino reset
+        
+    def write_servo(self, servo_id, angle):
+        angle = int(max(0, min(180, angle)))
+        cmd = f"SERVO,{servo_id},{angle}\\n"
+        self.serial.write(cmd.encode())
+        time.sleep(0.05)
+        
+    def set_pose(self, positions):
+        """Set all servo positions from an array"""
+        for servo_id, angle in enumerate(positions):
+            self.write_servo(servo_id, angle)
+        time.sleep(0.5)  # Wait for servos to reach position
+        
+    def run_sequence(self):
+        """Play all generated poses in sequence"""
+`;
+
+                // Add all generated arrays
+                this.generatedArrays.forEach(array => {
+                    pythonScript += `        ${array.name} = [${array.positions.join(', ')}]  # ${array.timestamp}\n`;
+                });
+                
+                pythonScript += `        
+        poses = [${this.generatedArrays.map(a => a.name).join(', ')}]
+        
+        print("Playing servo sequence...")
+        for i, pose in enumerate(poses):
+            print(f"Setting pose {i+1}: {pose}")
+            self.set_pose(pose)
+            time.sleep(2)  # Hold pose for 2 seconds
+            
+        print("Sequence complete!")
+
+if __name__ == "__main__":
+    controller = ServoController(serial_port="COM11", baudrate=115200)
+    controller.run_sequence()
+`;
+                
+                // Add Python script to output
+                const outputContent = document.getElementById('outputContent');
+                outputContent.textContent += `\n\n# Python Script:\n${pythonScript}`;
+                outputContent.scrollTop = outputContent.scrollHeight;
+            }
+            
+            updateStatus(message, type = 'info') {
+                const statusBar = document.getElementById('statusBar');
+                
+                // Only change status if it's not the setup note
+                if (!statusBar.textContent.includes('python -m http.server')) {
+                    statusBar.textContent = message;
+                } else if (type === 'success' || type === 'error') {
+                    statusBar.textContent = message;
+                }
+                
+                // Reset classes
+                statusBar.className = 'status-bar';
+                
+                if (type === 'success') {
+                    statusBar.style.background = '#d4edda';
+                    statusBar.style.color = '#155724';
+                    statusBar.style.borderColor = '#c3e6cb';
+                } else if (type === 'error') {
+                    statusBar.style.background = '#f8d7da';
+                    statusBar.style.color = '#721c24';
+                    statusBar.style.borderColor = '#f5c6cb';
+                } else {
+                    statusBar.style.background = '#d1ecf1';
+                    statusBar.style.color = '#0c5460';
+                    statusBar.style.borderColor = '#bee5eb';
+                }
+            }
+        }
+        
+        // Initialize the controller when the page loads
+        let controller;
+        window.addEventListener('DOMContentLoaded', () => {
+            controller = new SimpleServoController();
+        });
+    </script>
+</body>
+</html>
