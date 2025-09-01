@@ -18,7 +18,7 @@ from WaveshareServoController import WaveshareServoController
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = False
+ODrive = True
 SPM = True
 Gripper = False
 SPM_Gripper = False  
@@ -494,11 +494,13 @@ def set_positions(position):
             # UpperRing = round((math.radians(UpperRing)),10)
             # MiddleRing = round((math.radians(MiddleRing)), 10)
             # LowerRing = round((math.radians(LowerRing)), 10)
-            
+
+            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
             controller.set_multiple_target_angles({
-            1: UpperRing,  # e.g., -30.0 degrees
-            2: MiddleRing,     # e.g., 0.0 degrees (center)
-            3: LowerRing      # e.g., +45.0 degrees
+                1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+                2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+                3: LowerRing * SERVO_INVERSIONS[3]      # Normal
             })
         
             # Your control loop can run as fast as needed
