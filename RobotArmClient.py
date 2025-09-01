@@ -14,6 +14,7 @@ import requests
 import sys
 import math 
 import socket
+from WaveshareServoController import WaveshareServoController
 
 ODrive = False  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
@@ -31,6 +32,13 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 
 start_moving = True
 position = ''
+
+# Initialize with your angle range
+controller = WaveshareServoController(
+    servo_ids=[1, 2, 3],
+    angle_range=(-45, 45),
+    position_range=(500, 3500)  # Safe range
+)
 
 # def get_ip_address():
 #     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -59,6 +67,7 @@ def find_device(vid, pid):
 pico_port = find_device(0x239A, 0x80F4)
 storm32_port = find_device(0x0483, 0x5740)
 nano_port = find_device(0x1A86, 0x7523)
+waveshare_servo_port = find_device(0x1A86, 0x55D3)
 
 if pico_port:
     print(f"✅ Found Pico on {pico_port}")
@@ -95,6 +104,16 @@ if Gripper:
         print("❌ Arduino Nano not found.")
 else:
     print("❌ Not connecting to the Gripper this time...")
+
+if waveshare_servo_port:
+    print(f"✅ Found Waveshare Servo Adapter on {waveshare_servo_port}")
+    try:
+        serial_Waveshare = serial.Serial(waveshare_servo_port, 115200, timeout=1)
+        print("✅ Waveshare Servo serial port opened.")
+    except serial.SerialException as e:
+        print(f"❌ Failed to open Waveshare Servo serial port: {e}")
+else:
+    print("❌ Waveshare Servo Adapter not found.")
 
 # Initialize variables      
 counter_num = 0

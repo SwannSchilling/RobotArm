@@ -1,5 +1,7 @@
 import time
 from scservo_sdk import *
+import serial
+import serial.tools.list_ports
 
 # Control table addresses (matching working example)
 ADDR_SCS_TORQUE_ENABLE     = 40
@@ -12,7 +14,7 @@ ADDR_SCS_PRESENT_POSITION  = 56
 PROTOCOL_END               = 0                 # SCServo bit end(STS/SMS=0, SCS=1)
 
 # Default setting
-SCS_ID                     = 31                 # Servo ID
+SCS_ID                     = 1                 # Servo ID
 BAUDRATE                   = 1000000           # Default baudrate
 DEVICENAME                 = 'COM42'           # Your COM port
 
@@ -23,26 +25,41 @@ SCS_MOVING_STATUS_THRESHOLD = 20               # Movement threshold
 SCS_MOVING_SPEED           = 0                 # Moving speed (0 = max speed)
 SCS_MOVING_ACC             = 0                 # Moving acceleration
 
+def find_device(vid, pid):
+    """Find the COM port of a USB device by VID and PID"""
+    for port in serial.tools.list_ports.comports():
+        if port.vid == vid and port.pid == pid:
+            return port.device
+    return None
+
 def initialize_servo():
     """Initialize the servo communication"""
+    # Find Waveshare Servo Adapter automatically
+    DEVICENAME = find_device(0x1A86, 0x55D3)   # VID=1A86, PID=55D3
+    if DEVICENAME is None:
+        print("❌ Waveshare Servo Adapter not found.")
+        quit()
+    else:
+        print(f"✅ Found Waveshare Servo Adapter on {DEVICENAME}")
+
     # Initialize PortHandler instance
     portHandler = PortHandler(DEVICENAME)
     
-    # Initialize PacketHandler instance (KEY FIX: Using PROTOCOL_END=0)
+    # Initialize PacketHandler instance
     packetHandler = PacketHandler(PROTOCOL_END)
     
     # Open port
     if portHandler.openPort():
-        print("Succeeded to open the port")
+        print("✅ Succeeded to open the port")
     else:
-        print("Failed to open the port")
+        print("❌ Failed to open the port")
         quit()
     
     # Set port baudrate
     if portHandler.setBaudRate(BAUDRATE):
-        print("Succeeded to change the baudrate")
+        print(f"✅ Baudrate set to {BAUDRATE}")
     else:
-        print("Failed to change the baudrate")
+        print("❌ Failed to change the baudrate")
         quit()
     
     # Write SCServo acceleration

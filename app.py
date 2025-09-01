@@ -13,6 +13,7 @@ import logging
 import odrive.utils
 import os
 import platform
+from WaveshareServoController import WaveshareServoController
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
@@ -31,6 +32,14 @@ idle_timeout = 10.0  # Time in seconds after which to idle the motor if position
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 start_moving = True
+
+# Example with 20:1 gear reduction
+controller = WaveshareServoController(
+    servo_ids=[1, 2, 3],
+    angle_range=(-45, 45),      # Joint output angles (what you see)
+    reduction_ratio=20.0,       # 20:1 gear reduction
+    position_range=(500, 3500)  # Safe servo range
+)
 
 def get_ip_addresses():
     system = platform.system().lower()
@@ -481,18 +490,31 @@ def set_positions(position):
             # UpperRing = 25*(float(motorPositions[2]))
             # MiddleRing = 25*(float(motorPositions[1]))
             # LowerRing = 25*(float(motorPositions[0]))
-            UpperRing = round((math.radians(UpperRing)),10)
-            MiddleRing = round((math.radians(MiddleRing)), 10)
-            LowerRing = round((math.radians(LowerRing)), 10)
-            UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
+
+            # UpperRing = round((math.radians(UpperRing)),10)
+            # MiddleRing = round((math.radians(MiddleRing)), 10)
+            # LowerRing = round((math.radians(LowerRing)), 10)
+            
+            controller.set_multiple_target_angles({
+            1: UpperRing,  # e.g., -30.0 degrees
+            2: MiddleRing,     # e.g., 0.0 degrees (center)
+            3: LowerRing      # e.g., +45.0 degrees
+            })
+        
+            # Your control loop can run as fast as needed
+            # time.sleep(0.01)  # 100Hz control loop
+
+            # UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
             # print(UpperRing_Rotation)
-            serial_SPM.write(UpperRing_Rotation.encode())
-            MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
+            # serial_SPM.write(UpperRing_Rotation.encode())
+
+            # MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
             # print(MiddleRing_Rotation)
-            serial_SPM.write(MiddleRing_Rotation.encode())
-            LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
+            # serial_SPM.write(MiddleRing_Rotation.encode())
+
+            # LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
             # print(LowerRing_Rotation)
-            serial_SPM.write(LowerRing_Rotation.encode())
+            # serial_SPM.write(LowerRing_Rotation.encode())
 
         if Gripper == True:
             if not serial_Gripper.is_open:
