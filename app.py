@@ -11,16 +11,18 @@ from time import sleep
 import threading
 import logging
 import odrive.utils
+import os
+import platform
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
 ODrive = False
-SPM = False
+SPM = True
 Gripper = False
 SPM_Gripper = False  
+collect_data = False
 
-collect_data = True
 collect_position_data = ""
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
@@ -30,6 +32,27 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 
 start_moving = True
 
+def get_ip_addresses():
+    system = platform.system().lower()
+
+    if system == "linux":  # works on Raspberry Pi
+        try:
+            ips = os.popen("hostname -I").read().strip().split()
+            if ips:
+                return ips
+        except Exception:
+            pass
+
+    # Fallback for Windows (and general)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return [ip]
+    except Exception:
+        return ["127.0.0.1"]
+    
 from serial.tools import list_ports
 # hwinfo --short    --> hwinfo can also be used to list devices
 # lsusb             --> short info
@@ -562,17 +585,14 @@ def set_axis_3(ax_3):
     return "axis_3 set to:"+ str(axis_3)
 
 if __name__ == '__main__':
-    # Get all IPs of the Pi
-    ips = os.popen("hostname -I").read().strip().split()
-
     port = 5000
+    ips = get_ip_addresses()
+
     print("\n🌐 Flask server is running at:")
     for ip in ips:
         print(f"   → http://{ip}:{port}")
 
-    # Run Flask on all interfaces
     app.run(host="0.0.0.0", port=port)
-    
     # app.run(debug=True, port=80, host='0.0.0.0')
     # app.debug = True
     # app.run(debug=False, port=5000, host="0.0.0.0")
