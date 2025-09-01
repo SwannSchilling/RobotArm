@@ -33,14 +33,6 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 
 start_moving = True
 
-# Example with 20:1 gear reduction
-controller = WaveshareServoController(
-    servo_ids=[1, 2, 3],
-    angle_range=(-45, 45),      # Joint output angles (what you see)
-    reduction_ratio=20.0,       # 20:1 gear reduction
-    position_range=(500, 3500)  # Safe servo range
-)
-
 def get_ip_addresses():
     system = platform.system().lower()
 
@@ -275,6 +267,13 @@ if ODrive == True:
 else:
     print("not connecting to the Odrive this time...")
 
+# Example with 20:1 gear reduction
+controller = WaveshareServoController(
+    servo_ids=[1, 2, 3],
+    angle_range=(-45, 45),      # Joint output angles (what you see)
+    reduction_ratio=20.0,       # 20:1 gear reduction
+    position_range=(500, 3500)  # Safe servo range
+)
 def counter(positions):
     global serial_SPM
     global counter_num
