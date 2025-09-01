@@ -562,9 +562,20 @@ def set_axis_3(ax_3):
     return "axis_3 set to:"+ str(axis_3)
 
 if __name__ == '__main__':
+    # Get all IPs of the Pi
+    ips = os.popen("hostname -I").read().strip().split()
+
+    port = 5000
+    print("\n🌐 Flask server is running at:")
+    for ip in ips:
+        print(f"   → http://{ip}:{port}")
+
+    # Run Flask on all interfaces
+    app.run(host="0.0.0.0", port=port)
+    
     # app.run(debug=True, port=80, host='0.0.0.0')
     # app.debug = True
-    app.run(debug=False, port=5000, host="0.0.0.0")
+    # app.run(debug=False, port=5000, host="0.0.0.0")
     # app.run(debug=True, port=8080,host="192.168.2.114")
     # app.run()
 

@@ -32,21 +32,21 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 start_moving = True
 position = ''
 
-def get_ip_address():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # doesn't have to be reachable, just used to get local IP
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-    except Exception:
-        ip = "127.0.0.1"
-    finally:
-        s.close()
+# def get_ip_address():
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     try:
+#         # doesn't have to be reachable, just used to get local IP
+#         s.connect(("8.8.8.8", 80))
+#         ip = s.getsockname()[0]
+#     except Exception:
+#         ip = "127.0.0.1"
+#     finally:
+#         s.close()
 
-    print(f"\n💻 Flask server should be accessible at http://{ip}:5000 \n")
-    return ip
+#     print(f"\n💻 Flask server should be accessible at http://{ip}:5000 \n")
+#     return ip
 
-get_ip_address()
+# get_ip_address()
 
 # Device finder function
 def find_device(vid, pid):
