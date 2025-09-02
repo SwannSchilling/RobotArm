@@ -317,11 +317,22 @@ def counter(positions):
         sleep(.2)
         stored_positions = [0, 0, 0]
 
-@app.route("/poses", methods=["GET"])
-def endpoint():
-    msg = request.args.get("msg", "")
-    print(f"Received message: {msg}")
-    return msg 
+@app.route('/poses', methods=['GET'])
+def poses():
+    global last_message
+    
+    # Check if there's a new message in the request
+    msg = request.args.get('msg', '').strip()
+    
+    if msg:
+        # New message received, store it
+        last_message = msg
+        print(f"Received message: {msg}")
+        return msg
+    else:
+        # No new message, return the last stored message
+        return last_message
+    
 @app.route('/set_positions_a/<position_a>', methods=['GET','POST'])
 def set_positions_a(position_a):
     motor_a.value = position_a
