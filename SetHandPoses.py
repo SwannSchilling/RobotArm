@@ -60,24 +60,32 @@ class ServoController:
         self.serial.write(cmd.encode())
         
         # DEBUG: Try to read any response from Arduino
-        time.sleep(0.1)
+        time.sleep(0.02)  # Reduced from 0.1s to 20ms
         if self.serial.in_waiting > 0:
             response = self.serial.read(self.serial.in_waiting).decode('utf-8', errors='ignore')
             print(f"📥 Arduino response: {repr(response)}")
         
-        time.sleep(0.05)
+        time.sleep(0.01)  # Reduced from 50ms to 10ms between servo commands
 
-    def set_pose(self, positions, prev_positions=None):
+    def set_pose_fast(self, positions, prev_positions=None):
+        """Fast pose setting - send all commands quickly"""
         print(f"🎯 Setting pose: {positions}")
+        
+        # Send all servo commands rapidly
         for servo_id, angle in enumerate(positions):
-            self.write_servo(servo_id, angle)
-
+            angle = int(max(0, min(180, angle)))
+            cmd = f"SERVO,{servo_id},{angle}\n"
+            self.serial.write(cmd.encode())
+            time.sleep(0.005)  # Just 5ms between commands
+        
+        # Calculate wait time based on largest movement
         if prev_positions:
             max_delta = max(abs(a - b) for a, b in zip(positions, prev_positions))
-            wait_time = max_delta / 60 * 0.2 + 0.2
+            wait_time = max_delta / 120 + 0.1  # Faster calculation
         else:
-            wait_time = 0.5
-
+            wait_time = 0.3  # Reduced default wait
+        
+        print(f"⏱️ Waiting {wait_time:.2f}s for movement completion")
         time.sleep(wait_time)
 
     def test_single_servo(self, servo_id=0):
@@ -88,10 +96,12 @@ class ServoController:
             self.write_servo(servo_id, angle)
             time.sleep(1)
 
-    def poll_endpoint(self, url="http://127.0.0.1:5000/current_pose", interval=0.1):
+    def poll_endpoint(self, url="http://127.0.0.1:5000/current_pose", interval=0.05):
         """Continuously poll Flask for new pose commands"""
         last_pose = None
         empty_count = 0
+        consecutive_same = 0
+        
         try:
             while True:
                 try:
@@ -101,24 +111,33 @@ class ServoController:
                         
                         if pose_name:
                             empty_count = 0  # Reset empty counter
-                            print(f"📡 Received from endpoint: '{pose_name}'")
-                            if pose_name in self.poses:
-                                if pose_name != last_pose:
-                                    print(f"🎯 New pose: {pose_name}")
-                                    prev_pose = self.poses.get(last_pose) if last_pose else None
-                                    self.set_pose(self.poses[pose_name], prev_pose)
-                                    last_pose = pose_name
+                            
+                            if pose_name == last_pose:
+                                consecutive_same += 1
+                                # Only log every 20 polls (1 second) to avoid spam
+                                if consecutive_same % 20 == 0:
+                                    print(f"📡 Holding pose: {pose_name}")
                             else:
-                                print(f"❌ Unknown pose: '{pose_name}'")
+                                consecutive_same = 0
+                                print(f"📡 New pose received: '{pose_name}'")
+                                
+                                if pose_name in self.poses:
+                                    print(f"🎯 Executing pose: {pose_name}")
+                                    prev_pose = self.poses.get(last_pose) if last_pose else None
+                                    self.set_pose_fast(self.poses[pose_name], prev_pose)  # Use fast version
+                                    last_pose = pose_name
+                                else:
+                                    print(f"❌ Unknown pose: '{pose_name}'")
                         else:
+                            if last_pose is not None:  # Only print when transitioning to empty
+                                print("📡 No active pose - servos idle")
+                                last_pose = None
                             empty_count += 1
-                            if empty_count == 1:  # Only print once when we start getting empties
-                                print("📡 Waiting for pose commands...")
                                 
                 except requests.RequestException as e:
                     print(f"⚠️ Request error: {e}")
 
-                time.sleep(interval)  # Poll every 100ms instead of 20ms
+                time.sleep(interval)  # Poll every 50ms for responsiveness
         except KeyboardInterrupt:
             print("🛑 Stopped polling.")
 
