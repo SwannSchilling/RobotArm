@@ -317,21 +317,68 @@ def counter(positions):
         sleep(.2)
         stored_positions = [0, 0, 0]
 
-@app.route('/poses', methods=['GET'])
-def poses():
-    global last_message
+# Store pose state
+pose_state = {
+    "current_pose": "",
+    "last_updated": 0,
+    "sequence_id": 0  # Helps detect new poses
+}
+
+@app.route('/poses', methods=['GET', 'POST'])
+def set_pose():
+    """Endpoint for web interface to set poses"""
+    global pose_state
     
-    # Check if there's a new message in the request
-    msg = request.args.get('msg', '').strip()
+    if request.method == 'GET':
+        # Handle GET with query parameter (your current web interface)
+        msg = request.args.get('msg', '').strip()
+    else:
+        # Handle POST with JSON (more robust for future)
+        data = request.get_json() or {}
+        msg = data.get('pose', '').strip()
     
     if msg:
-        # New message received, store it
-        last_message = msg
-        print(f"Received message: {msg}")
+        pose_state["current_pose"] = msg
+        pose_state["last_updated"] = time.time()
+        pose_state["sequence_id"] += 1
+        print(f"📝 Pose set to: {msg} (seq: {pose_state['sequence_id']})")
         return msg
     else:
-        # No new message, return the last stored message
-        return last_message
+        return "No pose specified", 400
+
+@app.route('/current_pose', methods=['GET'])
+def get_current_pose():
+    """Endpoint for Python script to poll current pose"""
+    return pose_state["current_pose"]
+
+@app.route('/pose_status', methods=['GET'])
+def get_pose_status():
+    """Detailed status endpoint (useful for debugging)"""
+    return jsonify({
+        "current_pose": pose_state["current_pose"],
+        "last_updated": pose_state["last_updated"],
+        "sequence_id": pose_state["sequence_id"],
+        "age_seconds": time.time() - pose_state["last_updated"] if pose_state["last_updated"] > 0 else None
+    })
+
+@app.route('/clear', methods=['GET', 'POST'])
+def clear_pose():
+    """Clear current pose"""
+    global pose_state
+    pose_state["current_pose"] = ""
+    pose_state["last_updated"] = time.time()
+    pose_state["sequence_id"] += 1
+    print("🗑️ Pose cleared")
+    return "Pose cleared"
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": time.time(),
+        "has_pose": bool(pose_state["current_pose"])
+    })
     
 @app.route('/set_positions_a/<position_a>', methods=['GET','POST'])
 def set_positions_a(position_a):
