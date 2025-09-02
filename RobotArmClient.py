@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import serial
 import serial.tools.list_ports
 import odrive
@@ -21,6 +20,7 @@ ODrive = False  # Set to False if not using ODrive
 SPM = False  # Set to False if not using Storm32
 # Arduino Nano (only if Gripper is True)
 Gripper = False  # Set to False if not using Gripper
+Waveshare = False  # Set to False if not using Waveshare
 # Temperature threshold in Celsius to set 🔥 WARNING: Overheat!
 TEMP_THRESHOLD = 30.0
 
@@ -31,6 +31,17 @@ idle_timeout = 10.0  # Time in seconds after which to idle the motor if position
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 start_moving = True
+if Waveshare == True:
+    # Example with 20:1 gear reduction
+    controller = WaveshareServoController(
+        servo_ids=[1, 2, 3],
+        angle_range=(-45, 45),      # Joint output angles (what you see)
+        reduction_ratio=20.0,       # 20:1 gear reduction
+        position_range=(500, 3500)  # Safe servo range
+    )
+else:
+    print("Not connecting to the Waveshare this time...")
+
 position = ''
 
 # Initialize with your angle range

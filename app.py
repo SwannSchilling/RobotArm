@@ -18,10 +18,11 @@ from WaveshareServoController import WaveshareServoController
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = True
-SPM = True
+ODrive = Gripper = False
+SPM = Gripper = False
 Gripper = False
 SPM_Gripper = False  
+Waveshare = False
 collect_data = False
 
 collect_position_data = ""
@@ -32,14 +33,16 @@ idle_timeout = 10.0  # Time in seconds after which to idle the motor if position
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 start_moving = True
-
-# Example with 20:1 gear reduction
-controller = WaveshareServoController(
-    servo_ids=[1, 2, 3],
-    angle_range=(-45, 45),      # Joint output angles (what you see)
-    reduction_ratio=20.0,       # 20:1 gear reduction
-    position_range=(500, 3500)  # Safe servo range
-)
+if Waveshare == True:
+    # Example with 20:1 gear reduction
+    controller = WaveshareServoController(
+        servo_ids=[1, 2, 3],
+        angle_range=(-45, 45),      # Joint output angles (what you see)
+        reduction_ratio=20.0,       # 20:1 gear reduction
+        position_range=(500, 3500)  # Safe servo range
+    )
+else:
+    print("Not connecting to the Waveshare this time...")
 
 def get_ip_addresses():
     system = platform.system().lower()
@@ -314,7 +317,11 @@ def counter(positions):
         sleep(.2)
         stored_positions = [0, 0, 0]
 
-
+@app.route("/poses", methods=["GET"])
+def endpoint():
+    msg = request.args.get("msg", "")
+    print(f"Received message: {msg}")
+    return msg 
 @app.route('/set_positions_a/<position_a>', methods=['GET','POST'])
 def set_positions_a(position_a):
     motor_a.value = position_a
