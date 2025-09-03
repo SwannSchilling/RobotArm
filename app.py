@@ -15,6 +15,22 @@ import os
 import platform
 from WaveshareServoController import WaveshareServoController
 
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+from threading import Thread
+from SetHandPoses import ServoController 
+app = Flask(__name__)
+hand_controller = ServoController()
+
+def run_servo_polling():
+    hand_controller.poll_endpoint()
+
+# Start the servo polling in a background thread
+servo_thread = Thread(target=run_servo_polling, daemon=True)
+servo_thread.start()
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
@@ -181,9 +197,6 @@ input_filter_bandwidth = 0.2
 
 current_lim = 10
 calibration_current = 10
-
-posOffset = 0.0
-SERVO_INVERSIONS = {1: -1, 2: 1, 3: 1}
 
 def scale(val, src, dst):
     """
