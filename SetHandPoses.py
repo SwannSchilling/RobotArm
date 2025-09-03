@@ -11,18 +11,18 @@ import requests
 
 
 class ServoController:
-    def __init__(self, vid=0x2341, pid=0x0043, baudrate=115200):
-        """Auto-detect Arduino Uno by VID/PID and open serial port"""
+    def __init__(self, vid=0x1A86, pid=0x7523, baudrate=115200):
+        """Auto-detect Arduino Nano by VID/PID and open serial port"""
         self.port = self.find_device(vid, pid)
         if not self.port:
-            raise IOError(f"❌ Arduino Uno not found (VID={hex(vid)}, PID={hex(pid)})")
+            raise IOError(f"❌ Arduino Nano not found (VID={hex(vid)}, PID={hex(pid)})")
 
-        print(f"✅ Found Uno on {self.port}")
+        print(f"✅ Found Nano on {self.port}")
         try:
             self.serial = serial.Serial(self.port, baudrate, timeout=1)
-            print("✅ Uno serial port opened.")
+            print("✅ Nano serial port opened.")
         except serial.SerialException as e:
-            raise IOError(f"❌ Failed to open Uno serial port: {e}")
+            raise IOError(f"❌ Failed to open Nano serial port: {e}")
 
         time.sleep(2)  # Wait for Arduino reset
 
