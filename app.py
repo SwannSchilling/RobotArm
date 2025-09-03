@@ -15,30 +15,30 @@ import os
 import platform
 from WaveshareServoController import WaveshareServoController
 
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-from threading import Thread
-from SetHandPoses import ServoController 
-app = Flask(__name__)
-hand_controller = ServoController()
+# # --------------------------------------------------------------------------------
+# # --------------------------------------------------------------------------------
+# from threading import Thread
+# from SetHandPoses import ServoController 
+# app = Flask(__name__)
+# hand_controller = ServoController()
 
-def run_servo_polling():
-    hand_controller.poll_endpoint()
+# def run_servo_polling():
+#     hand_controller.poll_endpoint()
 
-# Start the servo polling in a background thread
-servo_thread = Thread(target=run_servo_polling, daemon=True)
-servo_thread.start()
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
+# # Start the servo polling in a background thread
+# servo_thread = Thread(target=run_servo_polling, daemon=True)
+# servo_thread.start()
+# # --------------------------------------------------------------------------------
+# # --------------------------------------------------------------------------------
 
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = False
-SPM = False
+ODrive = True
+SPM = True
 # Gripper = False
 # SPM_Gripper = False  
-Waveshare = False
+Waveshare = True
 collect_data = False
 
 posOffset = 0.0  # Persistent state
