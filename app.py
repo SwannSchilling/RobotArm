@@ -18,10 +18,10 @@ from WaveshareServoController import WaveshareServoController
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = Gripper = False
-SPM = Gripper = False
-Gripper = False
-SPM_Gripper = False  
+ODrive = False
+SPM = False
+# Gripper = False
+# SPM_Gripper = False  
 Waveshare = False
 collect_data = False
 
@@ -92,17 +92,17 @@ def find_serial_device(device_signature):
         raise ValueError(f'More than one device with signature {device_signature} found')
     return candidates[0].device
 
-if SPM_Gripper == True:
-    try:
-        print(find_serial_device('0483:5740'))
-        SPM_port = find_serial_device('0483:5740')
-        print('found SPM port...')
-        print(find_serial_device('1a86:7523'))
-        GRIPPER_port = find_serial_device('1a86:7523')
-        print('found GRIPPER port...')
-    except:
-        print('No Device Found With Given ID...')
-        exit()
+# if SPM_Gripper == True:
+#     try:
+#         print(find_serial_device('0483:5740'))
+#         SPM_port = find_serial_device('0483:5740')
+#         print('found SPM port...')
+#         print(find_serial_device('1a86:7523'))
+#         GRIPPER_port = find_serial_device('1a86:7523')
+#         print('found GRIPPER port...')
+#     except:
+#         print('No Device Found With Given ID...')
+#         exit()
 
 """ VID = 483
 PID = 5740
@@ -118,29 +118,29 @@ for device in device_list:
                 breakodrv0.clear_errors() 
             port = None """
 
-if SPM_Gripper == True:
-    try:
-        # serial_SPM = serial.Serial('COM3', 115200)
-        # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
-        serial_SPM = serial.Serial(SPM_port, 115200)
-        serial_SPM.close()
-        serial_SPM.open()
+# if SPM_Gripper == True:
+#     try:
+#         # serial_SPM = serial.Serial('COM3', 115200)
+#         # serial_SPM = serial.Serial('/dev/ttyACM0', 115200)
+#         serial_SPM = serial.Serial(SPM_port, 115200)
+#         serial_SPM.close()
+#         serial_SPM.open()
 
-        #serial_Gripper = serial.Serial('COM21', 115200)
-        serial_Gripper = serial.Serial(GRIPPER_port, 115200)
-        serial_Gripper.close()
-        serial_Gripper.open()
-    except serial.serialutil.SerialException:
-        print("No device connected...")
-        connected = False
-        exit()
+#         #serial_Gripper = serial.Serial('COM21', 115200)
+#         serial_Gripper = serial.Serial(GRIPPER_port, 115200)
+#         serial_Gripper.close()
+#         serial_Gripper.open()
+#     except serial.serialutil.SerialException:
+#         print("No device connected...")
+#         connected = False
+#         exit()
 
 time.sleep(2)
 
 # motorPositions = 'c1\r\n'
 
-counter_num = 0
-stored_positions = [0,0,0]
+# counter_num = 0
+# stored_positions = [0,0,0]
 
 app = Flask(__name__)
 
@@ -193,13 +193,13 @@ def scale(val, src, dst):
 
 def update_offset(pos):
     """Update offset based on input"""
-    global posOffset  # ✅ This is required!
+    global posOffset 
     setOffset = pos
     
     if setOffset == 2:
-        posOffset += 1
+        posOffset += 10
     elif setOffset == 1:
-        posOffset -= 1
+        posOffset -= 10
     # elif Gripper_State == 0: (no change needed)
     
     print(f"Offset updated to: {posOffset}")
@@ -318,44 +318,44 @@ if ODrive == True:
 else:
     print("not connecting to the Odrive this time...")
 
-def counter(positions):
-    global serial_SPM
-    global counter_num
-    global stored_positions
-    # stored_positions = np.array(stored_positions)
-    # positions = np.array(positions)
-    # stored_positions = np.add(stored_positions,positions)
-    stored_positions[0] = stored_positions[0] + float(positions[0])
-    stored_positions[1] = stored_positions[1] + float(positions[1])
-    stored_positions[2] = stored_positions[2] + float(positions[2])
-    counter_num += 1
-    print (counter_num)
-    print(stored_positions)
-    if counter_num ==5:
-        print("reset")
-        # stored_positions = stored_positions / 5
-        stored_positions[0] = stored_positions[0] /5
-        stored_positions[1] = stored_positions[1] /5
-        stored_positions[2] = stored_positions[2] /5
-        print(stored_positions)
-        counter_num = 0
-        UpperRing = 5 * (float(stored_positions[0]) + 30)
-        MiddleRing = 5 * (float(stored_positions[1]) + 60)
-        LowerRing = 5 * (float(stored_positions[2]))
-        UpperRing = round((math.radians(UpperRing)), 10)
-        MiddleRing = round((math.radians(MiddleRing)), 10)
-        LowerRing = round((math.radians(LowerRing)), 10)
-        UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
-        print(UpperRing_Rotation)
-        serial_SPM.write(UpperRing_Rotation.encode())
-        MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
-        print(MiddleRing_Rotation)
-        serial_SPM.write(MiddleRing_Rotation.encode())
-        LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
-        print(LowerRing_Rotation)
-        serial_SPM.write(LowerRing_Rotation.encode())
-        sleep(.2)
-        stored_positions = [0, 0, 0]
+# def counter(positions):
+#     global serial_SPM
+#     global counter_num
+#     global stored_positions
+#     # stored_positions = np.array(stored_positions)
+#     # positions = np.array(positions)
+#     # stored_positions = np.add(stored_positions,positions)
+#     stored_positions[0] = stored_positions[0] + float(positions[0])
+#     stored_positions[1] = stored_positions[1] + float(positions[1])
+#     stored_positions[2] = stored_positions[2] + float(positions[2])
+#     counter_num += 1
+#     print (counter_num)
+#     print(stored_positions)
+#     if counter_num ==5:
+#         print("reset")
+#         # stored_positions = stored_positions / 5
+#         stored_positions[0] = stored_positions[0] /5
+#         stored_positions[1] = stored_positions[1] /5
+#         stored_positions[2] = stored_positions[2] /5
+#         print(stored_positions)
+#         counter_num = 0
+#         UpperRing = 5 * (float(stored_positions[0]) + 30)
+#         MiddleRing = 5 * (float(stored_positions[1]) + 60)
+#         LowerRing = 5 * (float(stored_positions[2]))
+#         UpperRing = round((math.radians(UpperRing)), 10)
+#         MiddleRing = round((math.radians(MiddleRing)), 10)
+#         LowerRing = round((math.radians(LowerRing)), 10)
+#         UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
+#         print(UpperRing_Rotation)
+#         serial_SPM.write(UpperRing_Rotation.encode())
+#         MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
+#         print(MiddleRing_Rotation)
+#         serial_SPM.write(MiddleRing_Rotation.encode())
+#         LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
+#         print(LowerRing_Rotation)
+#         serial_SPM.write(LowerRing_Rotation.encode())
+#         sleep(.2)
+#         stored_positions = [0, 0, 0]
 
 # Store pose state
 pose_state = {
