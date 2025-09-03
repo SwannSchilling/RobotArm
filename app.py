@@ -25,7 +25,10 @@ SPM_Gripper = False
 Waveshare = False
 collect_data = False
 
+posOffset = 0.0  # Persistent state
+SERVO_INVERSIONS = {1: -1, 2: 1, 3: 1}
 collect_position_data = ""
+
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
 last_position_change_time = [0] * 4  # Track the last time each motor's position changed
@@ -35,11 +38,17 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 start_moving = True
 if Waveshare == True:
     # Example with 20:1 gear reduction
+    # controller = WaveshareServoController(
+    #     servo_ids=[1, 2, 3],
+    #     angle_range=(-45, 45),      # Joint output angles (what you see)
+    #     reduction_ratio=20.0,       # 20:1 gear reduction
+    #     position_range=(500, 3500)  # Safe servo range
+    # )
     controller = WaveshareServoController(
-        servo_ids=[1, 2, 3],
-        angle_range=(-45, 45),      # Joint output angles (what you see)
-        reduction_ratio=20.0,       # 20:1 gear reduction
-        position_range=(500, 3500)  # Safe servo range
+    servo_ids=[1, 2, 3],
+    angle_range=(-180, 180),    # Larger joint range
+    reduction_ratio=20.0,
+    position_range=(100, 4000)  # Use full servo range
     )
 else:
     print("Not connecting to the Waveshare this time...")
@@ -173,11 +182,42 @@ input_filter_bandwidth = 0.2
 current_lim = 10
 calibration_current = 10
 
+posOffset = 0.0
+SERVO_INVERSIONS = {1: -1, 2: 1, 3: 1}
+
 def scale(val, src, dst):
     """
     Scale the given value from the scale of src to the scale of dst.
     """
     return ((val - src[0]) / (src[1]-src[0])) * (dst[1]-dst[0]) + dst[0]
+
+def update_offset(pos):
+    """Update offset based on input"""
+    global posOffset  # ✅ This is required!
+    setOffset = pos
+    
+    if setOffset == 2:
+        posOffset += 1
+    elif setOffset == 1:
+        posOffset -= 1
+    # elif Gripper_State == 0: (no change needed)
+    
+    print(f"Offset updated to: {posOffset}")
+
+def get_servo_offsets():
+    """Get current servo offsets"""
+    return {1: posOffset, 2: posOffset, 3: posOffset}
+
+def apply_servo_corrections(angles):
+    """Apply inversions and offsets"""
+    corrected = {}
+    offsets = get_servo_offsets()
+    
+    for servo_id, angle in angles.items():
+        corrected_angle = angle * SERVO_INVERSIONS.get(servo_id, 1)
+        corrected_angle += offsets.get(servo_id, 0.0)
+        corrected[servo_id] = corrected_angle
+    return corrected
 
 if ODrive == True:
     print("finding an odrive...")
@@ -560,14 +600,34 @@ def set_positions(position):
             # MiddleRing = round((math.radians(MiddleRing)), 10)
             # LowerRing = round((math.radians(LowerRing)), 10)
 
-            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+            # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+            # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
 
-            controller.set_multiple_target_angles({
-                1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
-                2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
-                3: LowerRing * SERVO_INVERSIONS[3]      # Normal
-            })
-        
+            # def apply_servo_corrections(angles):
+            #     """Apply inversions and offsets to servo angles"""
+            #     corrected = {}
+            #     for servo_id, angle in angles.items():
+            #         # Apply inversion first, then offset
+            #         corrected_angle = angle * SERVO_INVERSIONS.get(servo_id, 1)
+            #         corrected_angle += SERVO_OFFSETS.get(servo_id, 0.0)
+            #         corrected[servo_id] = corrected_angle
+            #     return corrected
+            
+            # Update offset
+            update_offset(int(motorPositions[7]))
+
+            raw_angles = {
+                    1: UpperRing,    
+                    2: MiddleRing,   
+                    3: LowerRing     
+                }
+            
+            # Apply corrections with current offset
+            corrected_angles = apply_servo_corrections(raw_angles)
+            controller.set_multiple_target_angles(corrected_angles)
+            
+            return {"status": "ok", "current_offset": posOffset}
+
             # Your control loop can run as fast as needed
             # time.sleep(0.01)  # 100Hz control loop
 
@@ -583,18 +643,18 @@ def set_positions(position):
             # print(LowerRing_Rotation)
             # serial_SPM.write(LowerRing_Rotation.encode())
 
-        if Gripper == True:
-            if not serial_Gripper.is_open:
-                serial_Gripper.open()
+        # if Gripper == True:
+        #     if not serial_Gripper.is_open:
+        #         serial_Gripper.open()
             
-            Gripper_State = int(motorPositions[7])
-            if Gripper_State == 2:
-                serial_Gripper.write(b'a')
-            elif Gripper_State == 1:
-                serial_Gripper.write(b'b')
-            elif Gripper_State == 0:
-                #serial_Gripper.write(b'0')
-                serial_Gripper.close()
+        #     Gripper_State = int(motorPositions[7])
+        #     if Gripper_State == 2:
+        #         serial_Gripper.write(b'a')
+        #     elif Gripper_State == 1:
+        #         serial_Gripper.write(b'b')
+        #     elif Gripper_State == 0:
+        #         #serial_Gripper.write(b'0')
+        #         serial_Gripper.close()
     
     except NameError:
         print("Error")
