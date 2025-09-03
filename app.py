@@ -613,6 +613,14 @@ def set_positions(position):
             # MiddleRing = round((math.radians(MiddleRing)), 10)
             # LowerRing = round((math.radians(LowerRing)), 10)
 
+            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
+            controller.set_multiple_target_angles({
+                1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+                2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+                3: LowerRing * SERVO_INVERSIONS[3]      # Normal
+            })
+
             # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
             # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
 
@@ -626,20 +634,20 @@ def set_positions(position):
             #         corrected[servo_id] = corrected_angle
             #     return corrected
             
-            # Update offset
-            update_offset(int(motorPositions[7]))
+            # # Update offset might be wrong here
+            # update_offset(int(motorPositions[7]))
 
-            raw_angles = {
-                    1: UpperRing,    
-                    2: MiddleRing,   
-                    3: LowerRing     
-                }
+            # raw_angles = {
+            #         1: UpperRing,    
+            #         2: MiddleRing,   
+            #         3: LowerRing     
+            #     }
             
-            # Apply corrections with current offset
-            corrected_angles = apply_servo_corrections(raw_angles)
-            controller.set_multiple_target_angles(corrected_angles)
+            # # Apply corrections with current offset
+            # corrected_angles = apply_servo_corrections(raw_angles)
+            # controller.set_multiple_target_angles(corrected_angles)
             
-            return {"status": "ok", "current_offset": posOffset}
+            # return {"status": "ok", "current_offset": posOffset}
 
             # Your control loop can run as fast as needed
             # time.sleep(0.01)  # 100Hz control loop
