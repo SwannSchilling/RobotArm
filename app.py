@@ -633,7 +633,7 @@ def set_positions(position):
             elif setOffset == 1:
                 posOffset -= 20
 
-            SERVO_INVERSIONS = {1: 1, 2: 1, 3: 1}  # Servo 1,2,3 not_inverted
+            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 not_inverted
             # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
 
             controller.set_multiple_target_angles({
