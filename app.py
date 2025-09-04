@@ -635,12 +635,12 @@ def set_positions(position):
                 posOffset -= 20
 
             SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
-            SERVO_OFFSETS = {1: posOffset, 2: posOffset, 3: posOffset}  # Servo offsets in degrees
+            # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
 
             controller.set_multiple_target_angles({
-                1: (UpperRing * SERVO_INVERSIONS[1]) + SERVO_OFFSETS[1],  
-                2: (MiddleRing * SERVO_INVERSIONS[2]) + SERVO_OFFSETS[2],   
-                3: (LowerRing * SERVO_INVERSIONS[3]) + SERVO_OFFSETS[3]
+                1: UpperRing+posOffset * SERVO_INVERSIONS[1],  
+                2: MiddleRing+posOffset * SERVO_INVERSIONS[2],    
+                3: LowerRing+posOffset * SERVO_INVERSIONS[3]      
             })
 
             # def apply_servo_corrections(angles):
