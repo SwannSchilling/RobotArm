@@ -612,17 +612,36 @@ def set_positions(position):
             # UpperRing = round((math.radians(UpperRing)),10)
             # MiddleRing = round((math.radians(MiddleRing)), 10)
             # LowerRing = round((math.radians(LowerRing)), 10)
+            
+            # --------------------------------------------------------------------
+            # Servo controller setup working
+            # --------------------------------------------------------------------
+            # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
+            # controller.set_multiple_target_angles({
+            #     1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+            #     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+            #     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
+            # })
+            # --------------------------------------------------------------------
+            # --------------------------------------------------------------------
+
+            global posOffset 
+            setOffset = (int(motorPositions[7]))
+            
+            if setOffset == 2:
+                posOffset += 20
+            elif setOffset == 1:
+                posOffset -= 20
 
             SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+            SERVO_OFFSETS = {1: posOffset, 2: posOffset, 3: posOffset}  # Servo offsets in degrees
 
             controller.set_multiple_target_angles({
-                1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
-                2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
-                3: LowerRing * SERVO_INVERSIONS[3]      # Normal
+                1: (UpperRing * SERVO_INVERSIONS[1]) + SERVO_OFFSETS[1],  
+                2: (MiddleRing * SERVO_INVERSIONS[2]) + SERVO_OFFSETS[2],   
+                3: (LowerRing * SERVO_INVERSIONS[3]) + SERVO_OFFSETS[3]
             })
-
-            # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
-            # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
 
             # def apply_servo_corrections(angles):
             #     """Apply inversions and offsets to servo angles"""
