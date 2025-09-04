@@ -42,7 +42,6 @@ Waveshare = True
 collect_data = False
 
 posOffset = 0.0  # Persistent state
-SERVO_INVERSIONS = {1: -1, 2: 1, 3: 1}
 collect_position_data = ""
 
 # Initialize last positions and timeouts
