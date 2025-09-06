@@ -611,20 +611,9 @@ def set_positions(position):
             # UpperRing = round((math.radians(UpperRing)),10)
             # MiddleRing = round((math.radians(MiddleRing)), 10)
             # LowerRing = round((math.radians(LowerRing)), 10)
-            
+             # --------------------------------------------------------------------
+            # Seperate Offset to use on the wrist rotation
             # --------------------------------------------------------------------
-            # Servo controller setup working
-            # --------------------------------------------------------------------
-            # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
-
-            # controller.set_multiple_target_angles({
-            #     1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
-            #     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
-            #     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
-            # })
-            # --------------------------------------------------------------------
-            # --------------------------------------------------------------------
-
             global posOffset 
             setOffset = (int(motorPositions[7]))
             
@@ -632,16 +621,41 @@ def set_positions(position):
                 posOffset += 20
             elif setOffset == 1:
                 posOffset -= 20
-
-            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 not_inverted
-            # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
+            # --------------------------------------------------------------------
+            # Servo controller setup working
+            # --------------------------------------------------------------------
+            SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
 
             controller.set_multiple_target_angles({
-                1: (UpperRing + posOffset) * SERVO_INVERSIONS[1],  
-                2: (MiddleRing + posOffset) * SERVO_INVERSIONS[2],    
-                3: (LowerRing + posOffset) * SERVO_INVERSIONS[3]      
+                1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+                2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+                3: LowerRing * SERVO_INVERSIONS[3]      # Normal
             })
+            # --------------------------------------------------------------------
+            # --------------------------------------------------------------------
+
+            # --------------------------------------------------------------------
+            # Servo controller setup working but with offsets
+            # --------------------------------------------------------------------
+            # global posOffset 
+            # setOffset = (int(motorPositions[7]))
             
+            # if setOffset == 2:
+            #     posOffset += 20
+            # elif setOffset == 1:
+            #     posOffset -= 20
+
+            # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 not_inverted
+            # # SERVO_OFFSETS = {1: 0.0, 2: 0.0, 3: 0.0}  # Servo offsets in degrees
+
+            # controller.set_multiple_target_angles({
+            #     1: (UpperRing + posOffset) * SERVO_INVERSIONS[1],  
+            #     2: (MiddleRing + posOffset) * SERVO_INVERSIONS[2],    
+            #     3: (LowerRing + posOffset) * SERVO_INVERSIONS[3]      
+            # })
+            # --------------------------------------------------------------------
+            # --------------------------------------------------------------------
+
             # def apply_servo_corrections(angles):
             #     """Apply inversions and offsets to servo angles"""
             #     corrected = {}
