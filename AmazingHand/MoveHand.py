@@ -9,7 +9,7 @@ import time
 import serial
 
 class ServoController:
-    def __init__(self, serial_port="COM43", baudrate=115200):
+    def __init__(self, serial_port="COM7", baudrate=115200):
         self.serial = serial.Serial(serial_port, baudrate, timeout=0.5)
         time.sleep(2)  # Wait for Arduino reset
 
@@ -52,13 +52,13 @@ class ServoController:
         two = [60, 140, 65, 130, 180, 0, 90, 90]  
         three = [45, 120, 45, 90, 45, 90, 90, 90]
         middle = [180, 0, 62, 120, 180, 0, 90, 90]  
-        wide_open = [100, 180, 45, 97, 35, 60, 50, 150] 
+        wide_open = [100, 180, 45, 97, 35, 60, 50, 140] 
         victory = [100, 180, 45, 95, 180, 0, 180, 0] 
         metal = [60, 140, 180, 0, 65, 90, 180, 0] 
         ok = [170, 40, 45, 90, 45, 90, 115, 140]
 
-        poses = [closed, one, two, three, closed, two, victory, closed, middle, closed, metal, closed, ok, closed, wide_open, closed]
-        # poses = [wide_open, closed]
+        # poses = [closed, one, two, three, closed, two, victory, closed, middle, closed, metal, closed, ok, closed, wide_open, closed]
+        poses = [wide_open, closed]
         timeout = 1
         self.play_sequence(poses, timeout)
 

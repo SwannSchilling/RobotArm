@@ -43,6 +43,7 @@ collect_data = False
 
 posOffset = 0.0  # Persistent state
 collect_position_data = ""
+goalPositionWrist = 0
 
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
@@ -431,7 +432,13 @@ def health_check():
         "timestamp": time.time(),
         "has_pose": bool(pose_state["current_pose"])
     })
-    
+
+@app.route('/motor_command')
+def motor_command():
+    global goalPositionWrist
+    # Return the current goal position for the wrist motor
+    return str(goalPositionWrist)
+  
 @app.route('/set_positions_a/<position_a>', methods=['GET','POST'])
 def set_positions_a(position_a):
     motor_a.value = position_a
@@ -483,6 +490,7 @@ def set_positions(position):
     
     try:
         global serial_SPM
+        global goalPositionWrist
         # global motorPositions
         # print(position)
         motorPositions = str(position).replace(",",".")
@@ -492,6 +500,8 @@ def set_positions(position):
         LowerHinge_Rotation = float(motorPositions[4])
         UpperHinge_Rotation = float(motorPositions[5])
         EndEffector_Rotation = float(motorPositions[6])
+
+        goalPositionWrist = int(motorPositions[7])
 
         # Base_Rotation = round((Base_Rotation/360)*40,3)
         # LowerHinge_Rotation = round((LowerHinge_Rotation/360)*40,3)
