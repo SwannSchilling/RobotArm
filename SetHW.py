@@ -89,10 +89,10 @@ class ServoMotorController:
         old_pos = self.g_pos
         
         if command == 1:
-            self.g_pos += 1
+            self.g_pos -= 45
             print(f"🔧 Motor UP: {old_pos} -> {self.g_pos}")
         elif command == 2:
-            self.g_pos -= 1
+            self.g_pos += 45
             print(f"🔧 Motor DOWN: {old_pos} -> {self.g_pos}")
         elif command == 0:
             # Position unchanged, but still send current position
