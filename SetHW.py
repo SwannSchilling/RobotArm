@@ -9,7 +9,7 @@ import time
 import serial
 import serial.tools.list_ports
 import requests
-
+import math
 
 class ServoMotorController:
     def __init__(self, vid=0x1A86, pid=0x7523, baudrate=115200):
@@ -33,17 +33,19 @@ class ServoMotorController:
 
         # Define poses
         self.poses = {
-            "idle": [90, 90, 90, 90, 90, 90, 90, 90],
-            "closed": [180, 0, 180, 0, 180, 0, 180, 0],
-            "one": [60, 140, 180, 0, 180, 0, 90, 90],
-            "two": [60, 140, 65, 130, 180, 0, 90, 90],
-            "three": [45, 120, 45, 90, 45, 90, 90, 90],
-            "middle": [180, 0, 62, 120, 180, 0, 90, 90],
-            "wide_open": [100, 180, 45, 97, 35, 60, 50, 140],
-            "victory": [100, 180, 45, 95, 180, 0, 180, 0],
-            "metal": [60, 140, 180, 0, 65, 90, 180, 0],
-            "ok": [170, 40, 45, 90, 45, 90, 115, 140],
+            "L_UP":     [60, 140, 180, 0, 65, 90, 180, 0],       # metal
+            "L_DOWN":   [60, 140, 180, 0, 180, 0, 90, 90],       # one
+            "L_LEFT":   [60, 140, 65, 130, 180, 0, 90, 90],      # two
+            "L_RIGHT":  [45, 120, 45, 90, 45, 90, 90, 90],       # three
+            "R_UP":     [100, 180, 45, 97, 35, 60, 50, 140],     # wide_open
+            "R_DOWN":   [180, 0, 180, 0, 180, 0, 180, 0],        # closed
+            "R_LEFT":   [180, 0, 62, 120, 180, 0, 90, 90],       # middle
+            "R_RIGHT":  [100, 180, 45, 95, 180, 0, 180, 0],      # victory
+            "L_PRESS":  [90, 90, 90, 90, 90, 90, 90, 90],        # idle
+            "R_PRESS":  [170, 40, 45, 90, 45, 90, 115, 140],     # ok
         }
+
+        self.fast_mode = False  # default to eased movement
 
     @staticmethod
     def find_device(vid, pid):
@@ -52,6 +54,10 @@ class ServoMotorController:
             if port.vid == vid and port.pid == pid:
                 return port.device
         return None
+
+    def ease_in_out(self, t):
+        """Ease in-out using cosine interpolation, t in [0,1]"""
+        return 0.5 * (1 - math.cos(math.pi * t))
 
     def close(self):
         if self.serial and self.serial.is_open:
@@ -126,41 +132,66 @@ class ServoMotorController:
         print(f"⏱️ Waiting {wait_time:.2f}s for movement completion")
         time.sleep(wait_time)
 
-    def poll_motor_command(self, url="http://127.0.0.1:5000/motor_command"):
-        """Poll Flask endpoint for motor position command"""
-        try:
-            r = requests.get(url, timeout=0.5)
-            if r.status_code == 200:
-                command = int(r.text.strip())
-                return command
-            else:
-                print(f"⚠️ Motor endpoint returned status: {r.status_code}")
-                return None
-        except requests.RequestException as e:
-            print(f"⚠️ Motor endpoint error: {e}")
-            return None
-        except ValueError:
-            print(f"⚠️ Invalid motor command response: {r.text}")
-            return None
+    def set_pose_eased(self, target_positions, prev_positions=None, steps=60, duration=1.0):
+        if prev_positions is None:
+            self.set_pose_fast(target_positions)
+            return
 
-    def test_single_servo(self, servo_id=0):
-        """Test a single servo by moving it back and forth"""
-        print(f"🧪 Testing servo {servo_id}")
-        for angle in [0, 90, 180, 90]:
-            print(f"Moving servo {servo_id} to {angle}°")
-            self.write_servo(servo_id, angle)
-            time.sleep(1)
+        print(f"🎯 Starting eased transition to pose: {target_positions}")
 
+        # Calculate maximum movement to adjust timing
+        if prev_positions:
+            max_delta = max(abs(target - prev) for prev, target in zip(prev_positions, target_positions))
+            # Adjust duration based on movement size (bigger movements need more time)
+            adjusted_duration = duration * (1.0 + max_delta / 360.0)
+        else:
+            adjusted_duration = duration
+
+        # Pre-calculate all positions with better easing
+        all_positions = []
+        for i in range(steps + 1):
+            t = i / steps
+            # Use quintic easing for very smooth start/end
+            eased_t = 6*t**5 - 15*t**4 + 10*t**3
+            
+            positions = [
+                round(prev + (target - prev) * eased_t)
+                for prev, target in zip(prev_positions, target_positions)
+            ]
+            all_positions.append(positions)
+
+        # Send with precise timing
+        start_time = time.time()
+        for step, positions in enumerate(all_positions):
+            # Send all servo commands for this step
+            for servo_id, angle in enumerate(positions):
+                cmd = f"SERVO,{servo_id},{int(angle)}\n"
+                self.serial.write(cmd.encode())
+            
+            # Precise timing control
+            if step < len(all_positions) - 1:
+                elapsed = time.time() - start_time
+                expected_time = (step + 1) * (adjusted_duration / steps)
+                sleep_time = expected_time - elapsed
+                
+                if sleep_time > 0.001:  # Only sleep if significant time remains
+                    time.sleep(sleep_time)
+                # Small sleep to prevent CPU spinning
+                elif sleep_time > 0:
+                    pass  # Minimal delay, just continue
+
+        print("✅ Finished eased transition.")
+    
     def poll_endpoints(self, 
-                      pose_url="http://127.0.0.1:5000/current_pose", 
-                      motor_url="http://127.0.0.1:5000/motor_command", 
-                      interval=0.05):
+                    pose_url="http://127.0.0.1:5000/current_pose", 
+                    motor_url="http://127.0.0.1:5000/motor_command", 
+                    interval=0.05):
         """Continuously poll Flask for both pose and motor commands"""
         last_pose = None
+        last_pose_positions = None  # Track actual positions for smoother transitions
         last_motor_command = None
         empty_count = 0
         consecutive_same_pose = 0
-        consecutive_same_motor = 0
         
         try:
             while True:
@@ -171,11 +202,10 @@ class ServoMotorController:
                         pose_name = r.text.strip()
                         
                         if pose_name:
-                            empty_count = 0  # Reset empty counter
+                            empty_count = 0
                             
                             if pose_name == last_pose:
                                 consecutive_same_pose += 1
-                                # Only log every 20 polls (1 second) to avoid spam
                                 if consecutive_same_pose % 20 == 0:
                                     print(f"📡 Holding pose: {pose_name}")
                             else:
@@ -183,16 +213,20 @@ class ServoMotorController:
                                 print(f"📡 New pose received: '{pose_name}'")
                                 
                                 if pose_name in self.poses:
-                                    print(f"🎯 Executing pose: {pose_name}")
-                                    prev_pose = self.poses.get(last_pose) if last_pose else None
-                                    self.set_pose_fast(self.poses[pose_name], prev_pose)
+                                    target_positions = self.poses[pose_name]
+                                    if self.fast_mode:
+                                        self.set_pose_fast(target_positions, prev_positions=last_pose_positions)
+                                    else:
+                                        self.set_pose_eased(target_positions, prev_positions=last_pose_positions)
                                     last_pose = pose_name
+                                    last_pose_positions = target_positions[:]  # Copy current positions
                                 else:
                                     print(f"❌ Unknown pose: '{pose_name}'")
                         else:
-                            if last_pose is not None:  # Only print when transitioning to empty
+                            if last_pose is not None:
                                 print("📡 No active pose - servos idle")
                                 last_pose = None
+                                last_pose_positions = None
                             empty_count += 1
                                 
                 except requests.RequestException as e:
@@ -236,7 +270,7 @@ class ServoMotorController:
                 if user_input == 'quit':
                     break
                 elif user_input.startswith('pose '):
-                    pose_name = user_input[5:].strip()
+                    pose_name = user_input[5:].strip().upper()
                     if pose_name in self.poses:
                         print(f"🎯 Setting pose: {pose_name}")
                         self.set_pose_fast(self.poses[pose_name])
@@ -268,8 +302,14 @@ class ServoMotorController:
 
 if __name__ == "__main__":
     hand_controller = ServoMotorController()
+    
     try:
-        # Choose mode
+        # Ask user about fast/eased mode
+        mode_input = input("Use fast mode? (y/n, default n): ").strip().lower()
+        hand_controller.fast_mode = mode_input == "y"
+        print(f"⚡ Fast mode set to: {hand_controller.fast_mode}")
+        
+        # Choose main operation mode
         print("\n🚀 Select mode:")
         print("1. Automatic polling (default)")
         print("2. Manual testing")
