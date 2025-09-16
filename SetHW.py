@@ -182,16 +182,41 @@ class ServoMotorController:
 
         print("✅ Finished eased transition.")
     
+    def poll_motor_command(self, url="http://127.0.0.1:5000/motor_command"):
+        """Poll Flask endpoint for motor position command"""
+        try:
+            r = requests.get(url, timeout=0.5)
+            if r.status_code == 200:
+                command = int(r.text.strip())
+                return command
+            else:
+                print(f"⚠️ Motor endpoint returned status: {r.status_code}")
+                return None
+        except requests.RequestException as e:
+            print(f"⚠️ Motor endpoint error: {e}")
+            return None
+        except ValueError:
+            print(f"⚠️ Invalid motor command response: {r.text}")
+            return None
+
+    def test_single_servo(self, servo_id=0):
+        """Test a single servo by moving it back and forth"""
+        print(f"🧪 Testing servo {servo_id}")
+        for angle in [0, 90, 180, 90]:
+            print(f"Moving servo {servo_id} to {angle}°")
+            self.write_servo(servo_id, angle)
+            time.sleep(1)
+
     def poll_endpoints(self, 
-                    pose_url="http://127.0.0.1:5000/current_pose", 
-                    motor_url="http://127.0.0.1:5000/motor_command", 
-                    interval=0.05):
+                      pose_url="http://127.0.0.1:5000/current_pose", 
+                      motor_url="http://127.0.0.1:5000/motor_command", 
+                      interval=0.05):
         """Continuously poll Flask for both pose and motor commands"""
         last_pose = None
-        last_pose_positions = None  # Track actual positions for smoother transitions
         last_motor_command = None
         empty_count = 0
         consecutive_same_pose = 0
+        consecutive_same_motor = 0
         
         try:
             while True:
@@ -202,31 +227,30 @@ class ServoMotorController:
                         pose_name = r.text.strip()
                         
                         if pose_name:
-                            empty_count = 0
+                            empty_count = 0  # Reset empty counter
                             
                             if pose_name == last_pose:
                                 consecutive_same_pose += 1
+                                # Only log every 20 polls (1 second) to avoid spam
                                 if consecutive_same_pose % 20 == 0:
                                     print(f"📡 Holding pose: {pose_name}")
                             else:
                                 consecutive_same_pose = 0
                                 print(f"📡 New pose received: '{pose_name}'")
                                 
-                                if pose_name in self.poses:
-                                    target_positions = self.poses[pose_name]
-                                    if self.fast_mode:
-                                        self.set_pose_fast(target_positions, prev_positions=last_pose_positions)
-                                    else:
-                                        self.set_pose_eased(target_positions, prev_positions=last_pose_positions)
-                                    last_pose = pose_name
-                                    last_pose_positions = target_positions[:]  # Copy current positions
+                            if pose_name in self.poses:
+                                prev_pose = self.poses.get(last_pose) if last_pose else None
+                                if self.fast_mode:
+                                    self.set_pose_fast(self.poses[pose_name], prev_positions=prev_pose)
                                 else:
-                                    print(f"❌ Unknown pose: '{pose_name}'")
+                                    self.set_pose_eased(self.poses[pose_name], prev_positions=prev_pose)
+                                last_pose = pose_name
+                            else:
+                                print(f"❌ Unknown pose: '{pose_name}'")
                         else:
-                            if last_pose is not None:
+                            if last_pose is not None:  # Only print when transitioning to empty
                                 print("📡 No active pose - servos idle")
                                 last_pose = None
-                                last_pose_positions = None
                             empty_count += 1
                                 
                 except requests.RequestException as e:
