@@ -34,12 +34,12 @@ from WaveshareServoController import WaveshareServoController
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = True
-SPM = True
+ODrive = False
+SPM = False
 # Gripper = False
 # SPM_Gripper = False  
-Waveshare = True
-collect_data = False
+Waveshare = False
+collect_data = True
 
 posOffset = 0.0  # Persistent state
 collect_position_data = ""
@@ -766,6 +766,11 @@ def clear_errors():
 def get_positions():
     motorPositions = [motor_a.value,motor_b.value,motor_c.value]
     return json.dumps(motorPositions)
+
+@app.route('/debug/<debug_position>', methods=['GET','POST'])
+def debug_positions(debug_position):
+    print(debug_position)
+    return json.dumps(debug_position)
 
 @app.route('/')
 def index():

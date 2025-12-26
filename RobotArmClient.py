@@ -15,14 +15,15 @@ import math
 import socket
 from WaveshareServoController import WaveshareServoController
 
-ODrive = False  # Set to False if not using ODrive
+ODrive = True  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
 SPM = False  # Set to False if not using Storm32
 # Arduino Nano (only if Gripper is True)
 Gripper = False  # Set to False if not using Gripper
-Waveshare = False  # Set to False if not using Waveshare
+Waveshare = True  # Set to False if not using Waveshare
+SPM_Waveshare = True  # Set to False if not using SPM_Waveshare
 # Temperature threshold in Celsius to set 🔥 WARNING: Overheat!
-TEMP_THRESHOLD = 30.0
+TEMP_THRESHOLD = 50.0
 
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
@@ -33,11 +34,17 @@ idle_threshold = 0.01  # Define a threshold for position change to avoid floatin
 start_moving = True
 if Waveshare == True:
     # Example with 20:1 gear reduction
+    # controller = WaveshareServoController(
+    #     servo_ids=[1, 2, 3],
+    #     angle_range=(-45, 45),      # Joint output angles (what you see)
+    #     reduction_ratio=20.0,       # 20:1 gear reduction
+    #     position_range=(500, 3500)  # Safe servo range
+    # )
     controller = WaveshareServoController(
-        servo_ids=[1, 2, 3],
-        angle_range=(-45, 45),      # Joint output angles (what you see)
-        reduction_ratio=20.0,       # 20:1 gear reduction
-        position_range=(500, 3500)  # Safe servo range
+    servo_ids=[1, 2, 3],
+    angle_range=(-180, 180),    # Larger joint range
+    reduction_ratio=20.0,
+    position_range=(100, 4000)  # Use full servo range
     )
 else:
     print("Not connecting to the Waveshare this time...")
@@ -441,38 +448,43 @@ def poll_flask():
                 odrive_states['axis2'] = odrv0.axis0.current_state
 
 
-            if SPM == True:
+            if SPM_Waveshare == True:
                 UpperRing = 5*(float(motorPositions[0])+30)
                 MiddleRing = 5*(float(motorPositions[1])+60)
                 LowerRing = 5*(float(motorPositions[2]))
-                # UpperRing = 25*(float(motorPositions[2]))
-                # MiddleRing = 25*(float(motorPositions[1]))
-                # LowerRing = 25*(float(motorPositions[0]))
-                UpperRing = round((math.radians(UpperRing)),10)
-                MiddleRing = round((math.radians(MiddleRing)), 10)
-                LowerRing = round((math.radians(LowerRing)), 10)
-                UpperRing_Rotation = str('a' + str(UpperRing) + '\r\n')
-                # print(UpperRing_Rotation)
-                serial_SPM.write(UpperRing_Rotation.encode())
-                MiddleRing_Rotation = str('b' + str(MiddleRing) + '\r\n')
-                # print(MiddleRing_Rotation)
-                serial_SPM.write(MiddleRing_Rotation.encode())
-                LowerRing_Rotation = str('c' + str(LowerRing) + '\r\n')
-                # print(LowerRing_Rotation)
-                serial_SPM.write(LowerRing_Rotation.encode())
-
-            if Gripper == True:
-                if not serial_Gripper.is_open:
-                    serial_Gripper.open()
+                # --------------------------------------------------------------------
+                # Seperate Offset to use on the wrist rotation
+                # --------------------------------------------------------------------
+                global posOffset 
+                setOffset = (int(motorPositions[7]))
                 
-                Gripper_State = int(motorPositions[7])
-                if Gripper_State == 2:
-                    serial_Gripper.write(b'a')
-                elif Gripper_State == 1:
-                    serial_Gripper.write(b'b')
-                elif Gripper_State == 0:
-                    #serial_Gripper.write(b'0')
-                    serial_Gripper.close()
+                if setOffset == 2:
+                    posOffset += 20
+                elif setOffset == 1:
+                    posOffset -= 20
+                # --------------------------------------------------------------------
+                # Servo controller setup working
+                # --------------------------------------------------------------------
+                SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
+                controller.set_multiple_target_angles({
+                    1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+                    2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+                    3: LowerRing * SERVO_INVERSIONS[3]      # Normal
+                })
+
+            # if Gripper == True:
+            #     if not serial_Gripper.is_open:
+            #         serial_Gripper.open()
+                
+            #     Gripper_State = int(motorPositions[7])
+            #     if Gripper_State == 2:
+            #         serial_Gripper.write(b'a')
+            #     elif Gripper_State == 1:
+            #         serial_Gripper.write(b'b')
+            #     elif Gripper_State == 0:
+            #         #serial_Gripper.write(b'0')
+            #         serial_Gripper.close()
         
         except requests.exceptions.Timeout:
             print("Request timeout.")
