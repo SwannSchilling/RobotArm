@@ -297,6 +297,7 @@ def read_serial():
 
 def poll_flask():
     global posOffset
+    global current_gripper_val
     motorPositions = [0.0] * 8  # initialized once per thread run
     print(f"Initialized motorPositions with length: {len(motorPositions)}")
     current_time = time.time()
