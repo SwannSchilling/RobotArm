@@ -40,8 +40,8 @@ stored_positions = [0,0,0]
 serial_Pico = None 
 idle_flag = False
 position_changed_flag = False
-gripper_open = 40
-gripper_closed = 210
+gripper_open = 50
+gripper_closed = 150
 current_gripper_val = gripper_open # Initialize state memory
 
 if Waveshare == True:
