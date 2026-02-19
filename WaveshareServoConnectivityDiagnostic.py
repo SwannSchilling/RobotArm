@@ -1,14 +1,17 @@
 """
-Waveshare Servo - Safe Torque Enable
-=====================================
-1. Reads each servo's CURRENT position
-2. Sets that position as the GOAL position  ← prevents sudden movement
-3. THEN enables torque                       ← arm holds where it already is
-4. Confirms torque is active
-No movement commanded.
+Waveshare Servo - Safe Torque Enable (fixed)
+=============================================
+scservo_sdk write functions return (comm_result, error)      ← 2 values
+scservo_sdk read  functions return (data, comm_result, error) ← 3 values
+
+Steps per servo:
+  1. Read current position
+  2. Set goal = current position  ← hold in place, no sudden snap
+  3. Set gentle speed + accel
+  4. Enable torque
+  5. Confirm torque register reads back 1
 """
 
-import time
 import serial.tools.list_ports
 from scservo_sdk import PortHandler, PacketHandler, COMM_SUCCESS
 
@@ -31,6 +34,21 @@ def find_device(vid, pid):
         if port.vid == vid and port.pid == pid:
             return port.device
     return None
+
+# ── Write helpers (2-value return) ───────────────────────────────────────────
+def write1(ph, port, sid, addr, val, label=""):
+    cr, err = ph.write1ByteTxRx(port, sid, addr, val)
+    if cr != COMM_SUCCESS:
+        print(f"  ❌  {label} write failed: {ph.getTxRxResult(cr)}")
+        return False
+    return True
+
+def write2(ph, port, sid, addr, val, label=""):
+    cr, err = ph.write2ByteTxRx(port, sid, addr, val)
+    if cr != COMM_SUCCESS:
+        print(f"  ❌  {label} write failed: {ph.getTxRxResult(cr)}")
+        return False
+    return True
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def run():
@@ -72,31 +90,24 @@ def run():
             continue
         print(f"  📍 Current position : {pos}")
 
-        # Step 2: Write goal position = current position (so torque-on is a hold, not a snap)
-        _, cr, _ = packetHandler.write2ByteTxRx(
-            portHandler, sid, ADDR_SCS_GOAL_POSITION, pos
-        )
-        if cr != COMM_SUCCESS:
-            print(f"  ⚠️  Goal position write failed: {packetHandler.getTxRxResult(cr)}")
-        else:
-            print(f"  ✅  Goal position set to {pos} (hold in place)")
+        # Step 2: Set goal = current (hold in place before torque-on)
+        if not write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_POSITION, pos, "Goal position"):
+            all_ok = False
+            print()
+            continue
+        print(f"  ✅  Goal position set to {pos} (hold in place)")
 
-        # Step 3: Set gentle speed and acceleration so if there's any tiny
-        #         difference between read and actual, it moves slowly
-        packetHandler.write1ByteTxRx(portHandler, sid, ADDR_SCS_GOAL_ACC, 10)    # gentle accel
-        packetHandler.write2ByteTxRx(portHandler, sid, ADDR_SCS_GOAL_SPEED, 100) # gentle speed
+        # Step 3: Gentle speed/accel so any tiny correction is smooth
+        write1(packetHandler, portHandler, sid, ADDR_SCS_GOAL_ACC,    10,  "Acceleration")
+        write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_SPEED,  100, "Speed")
 
         # Step 4: Enable torque
-        _, cr, _ = packetHandler.write1ByteTxRx(
-            portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 1
-        )
-        if cr != COMM_SUCCESS:
-            print(f"  ❌  Torque enable failed: {packetHandler.getTxRxResult(cr)}")
+        if not write1(packetHandler, portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 1, "Torque enable"):
             all_ok = False
             print()
             continue
 
-        # Step 5: Confirm torque is now on
+        # Step 5: Confirm torque is on
         torque_val, cr2, _ = packetHandler.read1ByteTxRx(
             portHandler, sid, ADDR_SCS_TORQUE_ENABLE
         )
@@ -122,6 +133,9 @@ def run():
 
     portHandler.closePort()
     print("\nPort closed.")
+
+if __name__ == "__main__":
+    run()
 
 if __name__ == "__main__":
     run()
