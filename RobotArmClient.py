@@ -22,6 +22,7 @@ SPM = False  # Set to False if not using Storm32
 Gripper = False  # Set to False if not using Gripper
 Waveshare = True  # Set to False if not using Waveshare
 SPM_Waveshare = True  # Set to False if not using SPM_Waveshare
+OpenCM = True  # Set to False if not using OpenCM
 # Temperature threshold in Celsius to set 🔥 WARNING: Overheat!
 TEMP_THRESHOLD = 50.0
 
@@ -65,6 +66,26 @@ pico_port = find_device(0x239A, 0x80F4)
 storm32_port = find_device(0x0483, 0x5740)
 nano_port = find_device(0x1A86, 0x7523)
 waveshare_servo_port = find_device(0x1A86, 0x55D3)
+
+# OpenCM 9.04
+ROBOTIS_VID = 0xFFF1
+ROBOTIS_PID = 0xFF48
+BAUD_RATE = 115200
+OpenCM_port = find_device(ROBOTIS_VID, ROBOTIS_PID)
+
+if OpenCM_port:
+    print(f"✅ Found OpenCM on {OpenCM_port}")
+    try:
+        serial_OpenCM = serial.Serial(OpenCM_port, 115200, timeout=1)
+        print("✅ OpenCM serial port opened.")
+    except serial.SerialException as e:
+        print(f"❌ Failed to open OpenCM serial port: {e}")
+        # Abort if OpenCM is critical
+        sys.exit(1)
+else:
+    print("❌ OpenCM not found (Check Power Supply!).")
+    # We exit here because your script relies on reading the OpenCM for safety
+    sys.exit(1)
 
 if pico_port:
     print(f"✅ Found Pico on {pico_port}")
@@ -388,7 +409,7 @@ def poll_flask():
                 MiddleRing = 5*(float(motorPositions[1])+60)
                 LowerRing = 5*(float(motorPositions[2]))
 
-                print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
+                # print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
                 # --------------------------------------------------------------------
                 # Seperate Offset to use on the wrist rotation
                 # --------------------------------------------------------------------
@@ -408,6 +429,27 @@ def poll_flask():
                     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
+                
+            if OpenCM: # Assuming OpenCM is the boolean flag for connection
+                # 1. Use a dictionary for cleaner mapping and a default value
+                mapping = {0: 127, 1: 255, 2: 0}
+                gripper_state = int(motorPositions[7])
+                
+                # .get() prevents crashes if state is unexpected
+                val = mapping.get(gripper_state, None) 
+
+                if val is not None:
+                    serial_OpenCM.write(f"{val}\n".encode())
+                    
+                    # 2. Non-blocking feedback read (Check if data exists without forced sleeping)
+                    if serial_OpenCM.in_waiting > 0:
+                        try:
+                            response = serial_OpenCM.readline().decode().strip()
+                            print(f"OpenCM Feedback: {response}")
+                        except Exception as e:
+                            print(f"Serial Read Error: {e}")
+                else:
+                    print(f"⚠️ Unexpected Gripper_State: {gripper_state}")
 
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
