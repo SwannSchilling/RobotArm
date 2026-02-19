@@ -40,6 +40,7 @@ stored_positions = [0,0,0]
 serial_Pico = None 
 idle_flag = False
 position_changed_flag = False
+current_gripper_val = 127 # Default starting position (Neutral)
 
 if Waveshare == True:
     controller = WaveshareServoController(
@@ -431,26 +432,33 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-            if OpenCM: # Assuming OpenCM is the boolean flag for connection
-                # 1. Use a dictionary for cleaner mapping and a default value
-                mapping = {0: 127, 1: 255, 2: 0}
+            if OpenCM: 
                 gripper_state = int(motorPositions[7])
                 
-                # .get() prevents crashes if state is unexpected
-                val = mapping.get(gripper_state, None) 
+                # Define only the active trigger states
+                # State 1 -> Close (255), State 2 -> Open (0)
+                mapping = {1: 255, 2: 0}
+                
+                # Check if the current trigger state is 1 or 2
+                new_val = mapping.get(gripper_state)
 
-                if val is not None:
-                    serial_OpenCM.write(f"{val}\n".encode())
-                    
-                    # 2. Non-blocking feedback read (Check if data exists without forced sleeping)
-                    if serial_OpenCM.in_waiting > 0:
-                        try:
-                            response = serial_OpenCM.readline().decode().strip()
-                            print(f"OpenCM Feedback: {response}")
-                        except Exception as e:
-                            print(f"Serial Read Error: {e}")
-                else:
-                    print(f"⚠️ Unexpected Gripper_State: {gripper_state}")
+                if new_val is not None:
+                    # If the value has changed, send the update
+                    if new_val != current_gripper_val:
+                        current_gripper_val = new_val
+                        serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+                        print(f"Sent to OpenCM: {current_gripper_val}")
+                
+                # If gripper_state is 0, we simply do nothing, 
+                # which keeps the motor at current_gripper_val.
+
+                # Non-blocking feedback read
+                if serial_OpenCM.in_waiting > 0:
+                    try:
+                        response = serial_OpenCM.readline().decode().strip()
+                        print(f"OpenCM Feedback: {response}")
+                    except Exception as e:
+                        print(f"Serial Read Error: {e}")
 
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
