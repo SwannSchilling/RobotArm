@@ -1,169 +1,104 @@
 """
-Waveshare Servo Connectivity Diagnostic
-========================================
-Checks if servos are connected and responding WITHOUT moving them.
-Uses the Dynamixel-style protocol that Waveshare servo adapters use.
-
-Servo IDs tested: 1, 2, 3 (matching your WaveshareServoController config)
+Waveshare Servo Connectivity Diagnostic v3
+==========================================
+Uses scservo_sdk + 1000000 baud — identical stack to WaveshareServoController.
+No movement commands issued. Safe to run on a live robot arm.
 """
 
-import serial
-import serial.tools.list_ports
 import time
-import struct
+import serial.tools.list_ports
 
-# ── Config ────────────────────────────────────────────────────────────────────
-SERVO_IDS      = [1, 2, 3]
-BAUD_RATE      = 115200
-READ_TIMEOUT   = 0.2   # seconds
-TARGET_VID_PID = (0x1A86, 0x55D3)   # same VID/PID as in your main script
+# ── scservo_sdk imports (same as WaveshareServoController) ───────────────────
+try:
+    from scservo_sdk import PortHandler, PacketHandler, COMM_SUCCESS
+except ImportError:
+    print("❌  scservo_sdk not found.")
+    print("    Install it with:  pip install scservo_sdk  (or pip3 install scservo_sdk)")
+    raise SystemExit(1)
 
-# Dynamixel / SMS-STS register addresses (Waveshare ST-series servos)
-ADDR_PRESENT_POSITION = 56   # 2 bytes, current position
-ADDR_PRESENT_VOLTAGE  = 62   # 1 byte,  current voltage (×10 = mV*10 → V)
-ADDR_PRESENT_TEMP     = 63   # 1 byte,  temperature in °C
+# ── Config — copied verbatim from WaveshareServoController ───────────────────
+SERVO_IDS               = [1, 2, 3]
+BAUDRATE                = 1_000_000      # WaveshareServoController.BAUDRATE
+PROTOCOL_END            = 0             # WaveshareServoController.PROTOCOL_END
+WAVESHARE_VID           = 0x1A86
+WAVESHARE_PID           = 0x55D3
+
+ADDR_SCS_TORQUE_ENABLE  = 40
+ADDR_SCS_PRESENT_POSITION = 56
 
 # ── Port finder ───────────────────────────────────────────────────────────────
-def find_port(vid, pid):
-    for p in serial.tools.list_ports.comports():
-        if p.vid == vid and p.pid == pid:
-            return p.device
+def find_device(vid, pid):
+    for port in serial.tools.list_ports.comports():
+        if port.vid == vid and port.pid == pid:
+            return port.device
     return None
 
-# ── Waveshare / SMS-STS packet helpers ───────────────────────────────────────
-def checksum(data: list[int]) -> int:
-    return (~sum(data)) & 0xFF
-
-def build_read_packet(servo_id: int, address: int, length: int) -> bytes:
-    """Build an SMS-STS READ_DATA instruction packet."""
-    params   = [address, length]
-    payload  = [servo_id, 2 + len(params), 0x02] + params   # 0x02 = READ
-    cs       = checksum(payload)
-    packet   = bytes([0xFF, 0xFF] + payload + [cs])
-    return packet
-
-def parse_response(raw: bytes, expected_len: int):
-    """
-    Parse a Dynamixel-style response packet.
-    Returns (error_byte, data_bytes) or raises ValueError on bad packet.
-    """
-    if len(raw) < 6:
-        raise ValueError(f"Response too short: {len(raw)} bytes → {raw.hex()}")
-    if raw[0] != 0xFF or raw[1] != 0xFF:
-        raise ValueError(f"Bad header: {raw[:2].hex()}")
-
-    servo_id  = raw[2]
-    length    = raw[3]
-    error     = raw[4]
-    data      = raw[5:5 + expected_len]
-    cs_recv   = raw[5 + expected_len] if len(raw) > 5 + expected_len else None
-
-    cs_calc = checksum([servo_id, length, error] + list(data))
-    if cs_recv is not None and cs_recv != cs_calc:
-        raise ValueError(f"Checksum mismatch: got {cs_recv:#04x}, expected {cs_calc:#04x}")
-
-    return error, data
-
-def read_register(ser: serial.Serial, servo_id: int, address: int, length: int):
-    """Send a read request and return raw data bytes, or None on failure."""
-    ser.reset_input_buffer()
-    packet = build_read_packet(servo_id, address, length)
-    ser.write(packet)
-    time.sleep(READ_TIMEOUT)
-
-    raw = ser.read(ser.in_waiting or 32)
-    if not raw:
-        return None, "No response"
-    try:
-        error, data = parse_response(raw, length)
-        return data, error
-    except ValueError as e:
-        return None, str(e)
-
-# ── Decode helpers ────────────────────────────────────────────────────────────
-def decode_position(data: bytes) -> int:
-    """SMS-STS: little-endian 16-bit position."""
-    if len(data) < 2:
-        raise ValueError("Not enough bytes for position")
-    return struct.unpack('<H', data[:2])[0]
-
-def decode_voltage(data: bytes) -> float:
-    return data[0] / 10.0   # register unit is 0.1 V
-
-def decode_temp(data: bytes) -> int:
-    return data[0]           # °C
-
 # ── Main diagnostic ───────────────────────────────────────────────────────────
-def run_diagnostic():
+def run():
     print("=" * 60)
-    print("  Waveshare Servo Connectivity Diagnostic")
+    print("  Waveshare Servo Diagnostic  v3  (scservo_sdk / 1Mbaud)")
     print("=" * 60)
 
-    # 1. Find port
-    port = find_port(*TARGET_VID_PID)
-    if not port:
-        print(f"\n❌  Waveshare adapter NOT found (VID={TARGET_VID_PID[0]:#06x}, "
-              f"PID={TARGET_VID_PID[1]:#06x})")
-        print("\n── All detected serial ports ──")
+    # 1. Find adapter
+    device_name = find_device(WAVESHARE_VID, WAVESHARE_PID)
+    if device_name is None:
+        print("\n❌  Waveshare adapter not found. Detected ports:")
         for p in serial.tools.list_ports.comports():
-            print(f"   {p.device:12s}  VID={p.vid}  PID={p.pid}  → {p.description}")
-        return
-    print(f"\n✅  Adapter found on  {port}")
-
-    # 2. Open port
-    try:
-        ser = serial.Serial(port, BAUD_RATE, timeout=READ_TIMEOUT)
-        print(f"✅  Serial port opened ({BAUD_RATE} baud)")
-    except serial.SerialException as e:
-        print(f"❌  Could not open {port}: {e}")
+            print(f"   {p.device:12s}  VID={p.vid}  PID={p.pid}  {p.description}")
         return
 
-    time.sleep(0.3)   # let adapter settle
+    print(f"\n✅  Adapter found on {device_name}")
 
-    # 3. Ping / read each servo
+    # 2. Open port (same calls as _initialize_servo)
+    portHandler   = PortHandler(device_name)
+    packetHandler = PacketHandler(PROTOCOL_END)
+
+    if not portHandler.openPort():
+        print("❌  Failed to open port (is another process using it?)")
+        return
+    print("✅  Port opened")
+
+    if not portHandler.setBaudRate(BAUDRATE):
+        print(f"❌  Failed to set baud rate to {BAUDRATE}")
+        portHandler.closePort()
+        return
+    print(f"✅  Baud rate set to {BAUDRATE}")
+
+    # 3. Per-servo checks
     print(f"\n── Checking servo IDs: {SERVO_IDS} ──\n")
-
     results = {}
+
     for sid in SERVO_IDS:
         print(f"  Servo ID {sid}:")
 
-        # --- Position ---
-        data, err = read_register(ser, sid, ADDR_PRESENT_POSITION, 2)
-        if data is None:
-            print(f"    ❌  Position read FAILED  → {err}")
+        # ── Read present position ─────────────────────────────────────────
+        pos, comm_result, err = packetHandler.read2ByteTxRx(
+            portHandler, sid, ADDR_SCS_PRESENT_POSITION
+        )
+
+        if comm_result != COMM_SUCCESS:
+            reason = packetHandler.getTxRxResult(comm_result)
+            print(f"    ❌  Position read FAILED  →  comm_result: {reason}")
+            print(f"        (comm_result code = {comm_result})")
             results[sid] = "OFFLINE"
             print()
             continue
 
-        try:
-            pos = decode_position(data)
-            print(f"    ✅  Present Position : {pos}  (raw bytes: {data.hex()})")
-        except Exception as e:
-            print(f"    ⚠️  Position decode error: {e}")
-
-        # --- Voltage ---
-        data, err = read_register(ser, sid, ADDR_PRESENT_VOLTAGE, 1)
-        if data:
-            try:
-                volts = decode_voltage(data)
-                flag = "⚠️ LOW" if volts < 6.0 else ("⚠️ HIGH" if volts > 8.4 else "✅")
-                print(f"    {flag}  Voltage          : {volts:.1f} V")
-            except Exception as e:
-                print(f"    ⚠️  Voltage decode error: {e}")
+        if err != 0:
+            reason = packetHandler.getRxPacketError(err)
+            print(f"    ⚠️  Position read OK but packet error  →  {reason}")
         else:
-            print(f"    ⚠️  Voltage read failed  → {err}")
+            print(f"    ✅  Present Position : {pos}")
 
-        # --- Temperature ---
-        data, err = read_register(ser, sid, ADDR_PRESENT_TEMP, 1)
-        if data:
-            try:
-                temp = decode_temp(data)
-                flag = "🔥 HOT" if temp >= 50 else "✅"
-                print(f"    {flag}  Temperature      : {temp} °C")
-            except Exception as e:
-                print(f"    ⚠️  Temp decode error: {e}")
+        # ── Try reading torque enable register (1 byte) ───────────────────
+        torque, comm_result2, err2 = packetHandler.read1ByteTxRx(
+            portHandler, sid, ADDR_SCS_TORQUE_ENABLE
+        )
+        if comm_result2 == COMM_SUCCESS:
+            torque_str = "ENABLED" if torque else "DISABLED"
+            print(f"    ✅  Torque state      : {torque_str} ({torque})")
         else:
-            print(f"    ⚠️  Temperature read failed  → {err}")
+            print(f"    ⚠️  Torque read failed: {packetHandler.getTxRxResult(comm_result2)}")
 
         results[sid] = "ONLINE"
         print()
@@ -178,15 +113,29 @@ def run_diagnostic():
         if status != "ONLINE":
             all_ok = False
 
+    print()
     if all_ok:
-        print("\n🎉  All servos responding — safe to proceed.")
+        print("🎉  All servos responding — safe to proceed.\n")
     else:
-        print("\n⚠️  One or more servos did not respond.")
-        print("    Check: power supply, daisy-chain wiring, servo IDs, baud rate.")
+        print("⚠️  One or more servos offline. Troubleshooting guide:\n")
+        print("  comm_result codes from scservo_sdk:")
+        print("   -1001  COMM_PORT_BUSY   → Another process has the port open")
+        print("                             (kill your main script first)")
+        print("   -1002  COMM_TX_FAIL     → Packet could not be sent")
+        print("   -3001  COMM_RX_TIMEOUT  → Servo didn't reply in time")
+        print("                             (wrong baud rate, wiring, power)")
+        print("   -3002  COMM_RX_CORRUPT  → Response garbled (loose TTL wire)")
+        print()
+        print("  Hardware checklist:")
+        print("   1. 12V must be on the SERVO power header, not just ODrive bus")
+        print("      — servo LED should flash briefly on power-up")
+        print("   2. Data wire: adapter TTL pin → servo chain, shared GND")
+        print("   3. Only ONE process can own the serial port at a time")
+        print("   4. If daisy-chained: servo 1 OK but 2+3 fail → broken cable")
+        print("      between servo 1 and 2")
 
-    ser.close()
+    portHandler.closePort()
     print("\nPort closed. No movements were commanded.")
 
-# ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    run_diagnostic()
+    run()

@@ -3,6 +3,7 @@ from WaveshareServoController import WaveshareServoController
 
 # Method 1: Simple usage
 servo_ids = [1, 2, 3]
+
 controller = WaveshareServoController(servo_ids)
 
 # Move servos smoothly via background thread
