@@ -1,29 +1,28 @@
 """
-Waveshare Servo Connectivity Diagnostic v3
-==========================================
-Uses scservo_sdk + 1000000 baud — identical stack to WaveshareServoController.
-No movement commands issued. Safe to run on a live robot arm.
+Waveshare Servo - Safe Torque Enable
+=====================================
+1. Reads each servo's CURRENT position
+2. Sets that position as the GOAL position  ← prevents sudden movement
+3. THEN enables torque                       ← arm holds where it already is
+4. Confirms torque is active
+No movement commanded.
 """
 
 import time
 import serial.tools.list_ports
+from scservo_sdk import PortHandler, PacketHandler, COMM_SUCCESS
 
-# ── scservo_sdk imports (same as WaveshareServoController) ───────────────────
-try:
-    from scservo_sdk import PortHandler, PacketHandler, COMM_SUCCESS
-except ImportError:
-    print("❌  scservo_sdk not found.")
-    print("    Install it with:  pip install scservo_sdk  (or pip3 install scservo_sdk)")
-    raise SystemExit(1)
+# ── Config ────────────────────────────────────────────────────────────────────
+SERVO_IDS                 = [1, 2, 3]
+BAUDRATE                  = 1_000_000
+PROTOCOL_END              = 0
+WAVESHARE_VID             = 0x1A86
+WAVESHARE_PID             = 0x55D3
 
-# ── Config — copied verbatim from WaveshareServoController ───────────────────
-SERVO_IDS               = [1, 2, 3]
-BAUDRATE                = 1_000_000      # WaveshareServoController.BAUDRATE
-PROTOCOL_END            = 0             # WaveshareServoController.PROTOCOL_END
-WAVESHARE_VID           = 0x1A86
-WAVESHARE_PID           = 0x55D3
-
-ADDR_SCS_TORQUE_ENABLE  = 40
+ADDR_SCS_TORQUE_ENABLE    = 40
+ADDR_SCS_GOAL_ACC         = 41
+ADDR_SCS_GOAL_POSITION    = 42
+ADDR_SCS_GOAL_SPEED       = 46
 ADDR_SCS_PRESENT_POSITION = 56
 
 # ── Port finder ───────────────────────────────────────────────────────────────
@@ -33,109 +32,96 @@ def find_device(vid, pid):
             return port.device
     return None
 
-# ── Main diagnostic ───────────────────────────────────────────────────────────
+# ── Main ──────────────────────────────────────────────────────────────────────
 def run():
     print("=" * 60)
-    print("  Waveshare Servo Diagnostic  v3  (scservo_sdk / 1Mbaud)")
+    print("  Safe Torque Enable")
     print("=" * 60)
 
-    # 1. Find adapter
     device_name = find_device(WAVESHARE_VID, WAVESHARE_PID)
-    if device_name is None:
-        print("\n❌  Waveshare adapter not found. Detected ports:")
-        for p in serial.tools.list_ports.comports():
-            print(f"   {p.device:12s}  VID={p.vid}  PID={p.pid}  {p.description}")
+    if not device_name:
+        print("❌  Adapter not found.")
         return
 
-    print(f"\n✅  Adapter found on {device_name}")
-
-    # 2. Open port (same calls as _initialize_servo)
     portHandler   = PortHandler(device_name)
     packetHandler = PacketHandler(PROTOCOL_END)
 
     if not portHandler.openPort():
-        print("❌  Failed to open port (is another process using it?)")
+        print("❌  Failed to open port.")
         return
-    print("✅  Port opened")
-
     if not portHandler.setBaudRate(BAUDRATE):
-        print(f"❌  Failed to set baud rate to {BAUDRATE}")
+        print("❌  Failed to set baud rate.")
         portHandler.closePort()
         return
-    print(f"✅  Baud rate set to {BAUDRATE}")
 
-    # 3. Per-servo checks
-    print(f"\n── Checking servo IDs: {SERVO_IDS} ──\n")
-    results = {}
+    print(f"✅  Connected on {device_name} @ {BAUDRATE} baud\n")
+
+    all_ok = True
 
     for sid in SERVO_IDS:
-        print(f"  Servo ID {sid}:")
+        print(f"── Servo ID {sid} ──")
 
-        # ── Read present position ─────────────────────────────────────────
+        # Step 1: Read current position
         pos, comm_result, err = packetHandler.read2ByteTxRx(
             portHandler, sid, ADDR_SCS_PRESENT_POSITION
         )
-
         if comm_result != COMM_SUCCESS:
-            reason = packetHandler.getTxRxResult(comm_result)
-            print(f"    ❌  Position read FAILED  →  comm_result: {reason}")
-            print(f"        (comm_result code = {comm_result})")
-            results[sid] = "OFFLINE"
+            print(f"  ❌  Could not read position: {packetHandler.getTxRxResult(comm_result)}")
+            all_ok = False
+            print()
+            continue
+        print(f"  📍 Current position : {pos}")
+
+        # Step 2: Write goal position = current position (so torque-on is a hold, not a snap)
+        _, cr, _ = packetHandler.write2ByteTxRx(
+            portHandler, sid, ADDR_SCS_GOAL_POSITION, pos
+        )
+        if cr != COMM_SUCCESS:
+            print(f"  ⚠️  Goal position write failed: {packetHandler.getTxRxResult(cr)}")
+        else:
+            print(f"  ✅  Goal position set to {pos} (hold in place)")
+
+        # Step 3: Set gentle speed and acceleration so if there's any tiny
+        #         difference between read and actual, it moves slowly
+        packetHandler.write1ByteTxRx(portHandler, sid, ADDR_SCS_GOAL_ACC, 10)    # gentle accel
+        packetHandler.write2ByteTxRx(portHandler, sid, ADDR_SCS_GOAL_SPEED, 100) # gentle speed
+
+        # Step 4: Enable torque
+        _, cr, _ = packetHandler.write1ByteTxRx(
+            portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 1
+        )
+        if cr != COMM_SUCCESS:
+            print(f"  ❌  Torque enable failed: {packetHandler.getTxRxResult(cr)}")
+            all_ok = False
             print()
             continue
 
-        if err != 0:
-            reason = packetHandler.getRxPacketError(err)
-            print(f"    ⚠️  Position read OK but packet error  →  {reason}")
-        else:
-            print(f"    ✅  Present Position : {pos}")
-
-        # ── Try reading torque enable register (1 byte) ───────────────────
-        torque, comm_result2, err2 = packetHandler.read1ByteTxRx(
+        # Step 5: Confirm torque is now on
+        torque_val, cr2, _ = packetHandler.read1ByteTxRx(
             portHandler, sid, ADDR_SCS_TORQUE_ENABLE
         )
-        if comm_result2 == COMM_SUCCESS:
-            torque_str = "ENABLED" if torque else "DISABLED"
-            print(f"    ✅  Torque state      : {torque_str} ({torque})")
+        if cr2 == COMM_SUCCESS:
+            if torque_val == 1:
+                print(f"  ✅  Torque ENABLED and confirmed ✓")
+            else:
+                print(f"  ⚠️  Torque register reads {torque_val} — unexpected")
         else:
-            print(f"    ⚠️  Torque read failed: {packetHandler.getTxRxResult(comm_result2)}")
+            print(f"  ⚠️  Could not confirm torque state")
 
-        results[sid] = "ONLINE"
         print()
 
-    # 4. Summary
-    print("── Summary ──")
-    all_ok = True
-    for sid in SERVO_IDS:
-        status = results.get(sid, "NOT TESTED")
-        icon   = "✅" if status == "ONLINE" else "❌"
-        print(f"  Servo {sid}: {icon} {status}")
-        if status != "ONLINE":
-            all_ok = False
-
-    print()
+    # ── Summary ───────────────────────────────────────────────────────────────
+    print("=" * 60)
     if all_ok:
-        print("🎉  All servos responding — safe to proceed.\n")
+        print("🎉  All servos holding position with torque enabled.")
+        print("    The arm should feel rigid. You can now:")
+        print("    • Run your main script (WaveshareServoController)")
+        print("    • Send position commands safely")
     else:
-        print("⚠️  One or more servos offline. Troubleshooting guide:\n")
-        print("  comm_result codes from scservo_sdk:")
-        print("   -1001  COMM_PORT_BUSY   → Another process has the port open")
-        print("                             (kill your main script first)")
-        print("   -1002  COMM_TX_FAIL     → Packet could not be sent")
-        print("   -3001  COMM_RX_TIMEOUT  → Servo didn't reply in time")
-        print("                             (wrong baud rate, wiring, power)")
-        print("   -3002  COMM_RX_CORRUPT  → Response garbled (loose TTL wire)")
-        print()
-        print("  Hardware checklist:")
-        print("   1. 12V must be on the SERVO power header, not just ODrive bus")
-        print("      — servo LED should flash briefly on power-up")
-        print("   2. Data wire: adapter TTL pin → servo chain, shared GND")
-        print("   3. Only ONE process can own the serial port at a time")
-        print("   4. If daisy-chained: servo 1 OK but 2+3 fail → broken cable")
-        print("      between servo 1 and 2")
+        print("⚠️  One or more servos had issues — check output above.")
 
     portHandler.closePort()
-    print("\nPort closed. No movements were commanded.")
+    print("\nPort closed.")
 
 if __name__ == "__main__":
     run()
