@@ -387,6 +387,8 @@ def poll_flask():
                 UpperRing = 5*(float(motorPositions[0])+30)
                 MiddleRing = 5*(float(motorPositions[1])+60)
                 LowerRing = 5*(float(motorPositions[2]))
+
+                print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
                 # --------------------------------------------------------------------
                 # Seperate Offset to use on the wrist rotation
                 # --------------------------------------------------------------------
