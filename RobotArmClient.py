@@ -40,7 +40,9 @@ stored_positions = [0,0,0]
 serial_Pico = None 
 idle_flag = False
 position_changed_flag = False
-current_gripper_val = 127 # Default starting position (Neutral)
+gripper_open = 40
+gripper_closed = 210
+current_gripper_val = gripper_open # Initialize state memory
 
 if Waveshare == True:
     controller = WaveshareServoController(
@@ -298,6 +300,8 @@ def read_serial():
 def poll_flask():
     global posOffset
     global current_gripper_val
+    global gripper_closed
+    global gripper_open 
     motorPositions = [0.0] * 8  # initialized once per thread run
     print(f"Initialized motorPositions with length: {len(motorPositions)}")
     current_time = time.time()
@@ -436,26 +440,22 @@ def poll_flask():
             if OpenCM: 
                 gripper_state = int(motorPositions[7])
                 
-                # Define only the active trigger states
-                # State 1 -> Close (255), State 2 -> Open (0)
-                mapping = {1: 255, 2: 0}
+                # Matches your comment: 1 for Close, 2 for Open
+                mapping = {1: gripper_closed, 2: gripper_open}
                 
-                # Check if the current trigger state is 1 or 2
                 new_val = mapping.get(gripper_state)
 
-                if new_val is not None:
-                    # If the value has changed, send the update
-                    if new_val != current_gripper_val:
-                        current_gripper_val = new_val
-                        serial_OpenCM.write(f"{current_gripper_val}\n".encode())
-                        print(f"Sent to OpenCM: {current_gripper_val}")
-                
-                # If gripper_state is 0, we simply do nothing, 
-                # which keeps the motor at current_gripper_val.
+                # 1. Only act if the trigger is state 1 or 2
+                # 2. Only act if the state actually CHANGED (prevents serial flooding)
+                if new_val is not None and new_val != current_gripper_val:
+                    current_gripper_val = new_val
+                    serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+                    print(f"Sent to OpenCM: {current_gripper_val}")
 
                 # Non-blocking feedback read
                 if serial_OpenCM.in_waiting > 0:
                     try:
+                        # strip() removes the \n from the Arduino print
                         response = serial_OpenCM.readline().decode().strip()
                         print(f"OpenCM Feedback: {response}")
                     except Exception as e:
