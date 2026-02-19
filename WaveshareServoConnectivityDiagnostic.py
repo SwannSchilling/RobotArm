@@ -1,19 +1,6 @@
-"""
-Waveshare Servo - Safe Torque Enable (fixed)
-=============================================
-scservo_sdk write functions return (comm_result, error)      ← 2 values
-scservo_sdk read  functions return (data, comm_result, error) ← 3 values
-
-Steps per servo:
-  1. Read current position
-  2. Set goal = current position  ← hold in place, no sudden snap
-  3. Set gentle speed + accel
-  4. Enable torque
-  5. Confirm torque register reads back 1
-"""
-
 import serial.tools.list_ports
 from scservo_sdk import PortHandler, PacketHandler, COMM_SUCCESS
+import time
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SERVO_IDS                 = [1, 2, 3]
@@ -22,120 +9,109 @@ PROTOCOL_END              = 0
 WAVESHARE_VID             = 0x1A86
 WAVESHARE_PID             = 0x55D3
 
+# Memory Addresses (SCS Series)
 ADDR_SCS_TORQUE_ENABLE    = 40
 ADDR_SCS_GOAL_ACC         = 41
 ADDR_SCS_GOAL_POSITION    = 42
 ADDR_SCS_GOAL_SPEED       = 46
 ADDR_SCS_PRESENT_POSITION = 56
 
-# ── Port finder ───────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def find_device(vid, pid):
     for port in serial.tools.list_ports.comports():
         if port.vid == vid and port.pid == pid:
             return port.device
     return None
 
-# ── Write helpers (2-value return) ───────────────────────────────────────────
-def write1(ph, port, sid, addr, val, label=""):
+def write1(ph, port, sid, addr, val):
     cr, err = ph.write1ByteTxRx(port, sid, addr, val)
-    if cr != COMM_SUCCESS:
-        print(f"  ❌  {label} write failed: {ph.getTxRxResult(cr)}")
-        return False
-    return True
+    return cr == COMM_SUCCESS
 
-def write2(ph, port, sid, addr, val, label=""):
+def write2(ph, port, sid, addr, val):
     cr, err = ph.write2ByteTxRx(port, sid, addr, val)
-    if cr != COMM_SUCCESS:
-        print(f"  ❌  {label} write failed: {ph.getTxRxResult(cr)}")
-        return False
-    return True
+    return cr == COMM_SUCCESS
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── Main Logic ────────────────────────────────────────────────────────────────
 def run():
     print("=" * 60)
-    print("  Safe Torque Enable")
+    print("  Waveshare Servo Control: Safe Enable + Manual Input")
     print("=" * 60)
 
     device_name = find_device(WAVESHARE_VID, WAVESHARE_PID)
     if not device_name:
-        print("❌  Adapter not found.")
+        print("❌  Adapter not found. Check USB connection.")
         return
 
     portHandler   = PortHandler(device_name)
     packetHandler = PacketHandler(PROTOCOL_END)
 
-    if not portHandler.openPort():
-        print("❌  Failed to open port.")
-        return
-    if not portHandler.setBaudRate(BAUDRATE):
-        print("❌  Failed to set baud rate.")
-        portHandler.closePort()
+    if not (portHandler.openPort() and portHandler.setBaudRate(BAUDRATE)):
+        print("❌  Failed to initialize Serial Port.")
         return
 
-    print(f"✅  Connected on {device_name} @ {BAUDRATE} baud\n")
+    print(f"✅  Connected on {device_name}\n")
 
-    all_ok = True
-
+    # --- STEP 1: SAFE INITIALIZATION ---
     for sid in SERVO_IDS:
-        print(f"── Servo ID {sid} ──")
-
-        # Step 1: Read current position
-        pos, comm_result, err = packetHandler.read2ByteTxRx(
-            portHandler, sid, ADDR_SCS_PRESENT_POSITION
-        )
-        if comm_result != COMM_SUCCESS:
-            print(f"  ❌  Could not read position: {packetHandler.getTxRxResult(comm_result)}")
-            all_ok = False
-            print()
-            continue
-        print(f"  📍 Current position : {pos}")
-
-        # Step 2: Set goal = current (hold in place before torque-on)
-        if not write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_POSITION, pos, "Goal position"):
-            all_ok = False
-            print()
-            continue
-        print(f"  ✅  Goal position set to {pos} (hold in place)")
-
-        # Step 3: Gentle speed/accel so any tiny correction is smooth
-        write1(packetHandler, portHandler, sid, ADDR_SCS_GOAL_ACC,    10,  "Acceleration")
-        write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_SPEED,  100, "Speed")
-
-        # Step 4: Enable torque
-        if not write1(packetHandler, portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 1, "Torque enable"):
-            all_ok = False
-            print()
+        print(f"Initializing Servo {sid}...")
+        
+        # Read current pos so we don't jump
+        pos, cr, err = packetHandler.read2ByteTxRx(portHandler, sid, ADDR_SCS_PRESENT_POSITION)
+        if cr != COMM_SUCCESS:
+            print(f"  ❌ Failed to communicate with Servo {sid}")
             continue
 
-        # Step 5: Confirm torque is on
-        torque_val, cr2, _ = packetHandler.read1ByteTxRx(
-            portHandler, sid, ADDR_SCS_TORQUE_ENABLE
-        )
-        if cr2 == COMM_SUCCESS:
-            if torque_val == 1:
-                print(f"  ✅  Torque ENABLED and confirmed ✓")
-            else:
-                print(f"  ⚠️  Torque register reads {torque_val} — unexpected")
-        else:
-            print(f"  ⚠️  Could not confirm torque state")
+        # Sync goal to current position
+        write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_POSITION, pos)
+        # Set gentle movement parameters
+        write1(packetHandler, portHandler, sid, ADDR_SCS_GOAL_ACC, 15)
+        write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_SPEED, 200)
+        # Enable Torque
+        write1(packetHandler, portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 1)
+        
+        print(f"  ✅ Holding at {pos}. Torque ON.")
 
-        print()
-
-    # ── Summary ───────────────────────────────────────────────────────────────
+    # --- STEP 2: INTERACTIVE INPUT LOOP ---
+    print("\n" + "=" * 60)
+    print("READY: Enter positions for servos " + str(SERVO_IDS))
+    print("Format: pos1, pos2, pos3 (e.g., 2048, 2048, 2048)")
+    print("Type 'exit' to quit.")
     print("=" * 60)
-    if all_ok:
-        print("🎉  All servos holding position with torque enabled.")
-        print("    The arm should feel rigid. You can now:")
-        print("    • Run your main script (WaveshareServoController)")
-        print("    • Send position commands safely")
-    else:
-        print("⚠️  One or more servos had issues — check output above.")
 
-    portHandler.closePort()
-    print("\nPort closed.")
+    try:
+        while True:
+            user_input = input("\n>> Enter Positions: ").strip().lower()
+            
+            if user_input == 'exit':
+                break
+            
+            try:
+                # Split input by commas and convert to integers
+                parts = [int(p.strip()) for p in user_input.split(',')]
+                
+                if len(parts) != len(SERVO_IDS):
+                    print(f"⚠️ Error: Expected {len(SERVO_IDS)} values, got {len(parts)}.")
+                    continue
 
-if __name__ == "__main__":
-    run()
+                # Write to each servo
+                for i, sid in enumerate(SERVO_IDS):
+                    target = parts[i]
+                    # Clamp values for safety (0-4095 for 12-bit servos)
+                    target = max(0, min(4095, target))
+                    write2(packetHandler, portHandler, sid, ADDR_SCS_GOAL_POSITION, target)
+                    print(f"  Moving ID {sid} -> {target}")
+
+            except ValueError:
+                print("⚠️ Invalid input. Please enter numbers separated by commas.")
+
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    finally:
+        # Optional: Disable torque on exit for safety
+        for sid in SERVO_IDS:
+            write1(packetHandler, portHandler, sid, ADDR_SCS_TORQUE_ENABLE, 0)
+        portHandler.closePort()
+        print("Port closed. Torque disabled.")
 
 if __name__ == "__main__":
     run()
