@@ -87,19 +87,20 @@ else:
     # We exit here because your script relies on reading the OpenCM for safety
     sys.exit(1)
 
-if pico_port:
-    print(f"✅ Found Pico on {pico_port}")
-    try:
-        serial_Pico = serial.Serial(pico_port, 115200, timeout=1)
-        print("✅ Pico serial port opened.")
-    except serial.SerialException as e:
-        print(f"❌ Failed to open Pico serial port: {e}")
-        # Abort if Pico is critical
-        sys.exit(1)
-else:
-    print("❌ Pico not found (Check Power Supply!).")
-    # We exit here because your script relies on reading the Pico for safety
-    sys.exit(1) 
+# --- FIX 2: Discared the Pico to save poweron the Raspberry Pi's USB ports ---
+# if pico_port:
+#     print(f"✅ Found Pico on {pico_port}")
+#     try:
+#         serial_Pico = serial.Serial(pico_port, 115200, timeout=1)
+#         print("✅ Pico serial port opened.")
+#     except serial.SerialException as e:
+#         print(f"❌ Failed to open Pico serial port: {e}")
+#         # Abort if Pico is critical
+#         sys.exit(1)
+# else:
+#     print("❌ Pico not found (Check Power Supply!).")
+#     # We exit here because your script relies on reading the Pico for safety
+#     sys.exit(1) 
 
 if SPM:
     if storm32_port:
