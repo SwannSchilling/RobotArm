@@ -5,6 +5,7 @@ import odrive
 import odrive.utils
 from odrive.enums import *
 from odrive.utils import start_liveplotter
+import time 
 
 vel_limit = 100
 vel_gain = 0.02
