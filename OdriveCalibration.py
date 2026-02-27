@@ -1,150 +1,124 @@
 #!/usr/bin/python3
-import serial
-import serial.tools.list_ports
 import odrive
 import odrive.utils
 from odrive.enums import *
-from odrive.utils import start_liveplotter
-import time 
+import time
+import sys
 
-vel_limit = 100
-vel_gain = 0.02
-pos_gain = 3
-input_filter_bandwidth = 0.2
 
-current_lim = 10
-calibration_current = 10
+SERIAL_ODRV0 = "2088399B4D4D"
+SERIAL_ODRV1 = "2068399D4D4D"
 
-print("finding an odrive...")
 
-# Find a connected ODrive (this will block until you connect one)
-odrv0 = odrive.find_any(serial_number="2088399B4D4D")
-odrv1 = odrive.find_any(serial_number="2068399D4D4D")
+def connect_odrive(serial):
+    print(f"Connecting to ODrive {serial} ...")
+    return odrive.find_any(serial_number=serial)
+
+
+def wait_for_idle(axis):
+    while axis.current_state != AXIS_STATE_IDLE:
+        time.sleep(0.1)
+
+
+def print_axis_status(name, axis):
+    print(f"\n--- {name} ---")
+    print(f"Axis Error: {axis.error}")
+    print(f"Motor Error: {axis.motor.error}")
+    print(f"Encoder Error: {axis.encoder.error}")
+    print(f"Motor Pre-Calibrated: {axis.motor.config.pre_calibrated}")
+    print(f"Encoder Pre-Calibrated: {axis.encoder.config.pre_calibrated}")
+    print(f"Encoder CPR: {axis.encoder.config.cpr}")
+    print(f"Use Index: {axis.encoder.config.use_index}")
+    print(f"Motor Type: {axis.motor.config.motor_type}")
+
+
+def print_full_status(odrv, name):
+    print(f"\n==============================")
+    print(f"STATUS FOR {name}")
+    print(f"==============================")
+    print_axis_status(f"{name}.axis0", odrv.axis0)
+    print_axis_status(f"{name}.axis1", odrv.axis1)
+
+
+def calibrate_and_lock(odrv, name):
+    print(f"\nStarting FULL calibration on {name}...")
+
+    odrv.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    odrv.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+
+    wait_for_idle(odrv.axis0)
+    wait_for_idle(odrv.axis1)
+
+    print("Checking errors...")
+
+    # Axis 0
+    if (odrv.axis0.error == 0 and
+        odrv.axis0.motor.error == 0 and
+        odrv.axis0.encoder.error == 0):
+
+        odrv.axis0.motor.config.pre_calibrated = True
+        print(f"{name}.axis0 locked.")
+    else:
+        print(f"{name}.axis0 ERROR — not locking.")
+
+    # Axis 1
+    if (odrv.axis1.error == 0 and
+        odrv.axis1.motor.error == 0 and
+        odrv.axis1.encoder.error == 0):
+
+        odrv.axis1.motor.config.pre_calibrated = True
+        print(f"{name}.axis1 locked.")
+    else:
+        print(f"{name}.axis1 ERROR — not locking.")
+
+    print("Saving configuration (board will reboot)...")
+
+    try:
+        odrv.save_configuration()
+    except:
+        print("Reboot detected (expected).")
+
+    print("Waiting for reboot...")
+    time.sleep(5)
+
+    print("Reconnecting...")
+    return connect_odrive(name)
+
+
+# =========================
+# MAIN
+# =========================
+
+print("Connecting to both ODrives...")
+odrv0 = connect_odrive(SERIAL_ODRV0)
+odrv1 = connect_odrive(SERIAL_ODRV1)
 
 odrv0.clear_errors()
 odrv1.clear_errors()
 
-odrv0.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
-odrv0.axis1.controller.config.vel_integrator_gain = 0.3333333432674408
+while True:
+    print("\n========== MENU ==========")
+    print("1 - Show status")
+    print("2 - Calibrate & lock odrv0")
+    print("3 - Calibrate & lock odrv1")
+    print("4 - Exit")
+    print("==========================")
 
-odrv1.axis0.controller.config.vel_integrator_gain = 0.3333333432674408
-odrv1.axis1.controller.config.vel_integrator_gain = 0.3333333432674408
+    choice = input("Select option: ")
 
-odrv0.axis0.controller.config.vel_gain = vel_gain
-odrv0.axis1.controller.config.vel_gain = vel_gain
-odrv1.axis0.controller.config.vel_gain = vel_gain
-odrv1.axis1.controller.config.vel_gain = vel_gain
+    if choice == "1":
+        print_full_status(odrv0, SERIAL_ODRV0)
+        print_full_status(odrv1, SERIAL_ODRV1)
 
-odrv0.axis0.controller.config.vel_limit = vel_limit
-odrv0.axis1.controller.config.vel_limit = vel_limit
+    elif choice == "2":
+        odrv0 = calibrate_and_lock(odrv0, SERIAL_ODRV0)
 
-odrv1.axis0.controller.config.vel_limit = vel_limit
-odrv1.axis1.controller.config.vel_limit = vel_limit
+    elif choice == "3":
+        odrv1 = calibrate_and_lock(odrv1, SERIAL_ODRV1)
 
-odrv0.axis0.controller.config.pos_gain = pos_gain
-odrv0.axis1.controller.config.pos_gain = pos_gain
+    elif choice == "4":
+        print("Exiting.")
+        sys.exit(0)
 
-odrv1.axis0.controller.config.pos_gain = pos_gain
-odrv1.axis1.controller.config.pos_gain = pos_gain
-
-odrv0.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
-odrv0.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
-
-odrv1.axis0.controller.config.input_filter_bandwidth = input_filter_bandwidth
-odrv1.axis1.controller.config.input_filter_bandwidth = input_filter_bandwidth
-
-odrv1.axis0.motor.config.current_lim = current_lim
-odrv1.axis1.motor.config.current_lim = current_lim
-odrv1.axis0.motor.config.calibration_current = calibration_current
-odrv1.axis1.motor.config.calibration_current = calibration_current
-
-print("starting calibration...")
-odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-
-while odrv0.axis0.current_state != AXIS_STATE_IDLE:
-    time.sleep(0.1)
-while odrv0.axis1.current_state != AXIS_STATE_IDLE:
-    time.sleep(0.1)
-while odrv1.axis0.current_state != AXIS_STATE_IDLE:
-    time.sleep(0.1)
-while odrv1.axis1.current_state != AXIS_STATE_IDLE:
-    time.sleep(0.1)
-print("checking errors and locking motor calibration...")
-
-# =========================
-# ODRV0 AXIS0
-# =========================
-if (odrv0.axis0.error == 0 and
-    odrv0.axis0.motor.error == 0 and
-    odrv0.axis0.encoder.error == 0):
-
-    odrv0.axis0.motor.config.pre_calibrated = True
-    print("odrv0.axis0 calibration locked.")
-else:
-    print("odrv0.axis0 ERROR — not saving.")
-
-
-# =========================
-# ODRV0 AXIS1
-# =========================
-if (odrv0.axis1.error == 0 and
-    odrv0.axis1.motor.error == 0 and
-    odrv0.axis1.encoder.error == 0):
-
-    odrv0.axis1.motor.config.pre_calibrated = True
-    print("odrv0.axis1 calibration locked.")
-else:
-    print("odrv0.axis1 ERROR — not saving.")
-
-
-# =========================
-# ODRV1 AXIS0
-# =========================
-if (odrv1.axis0.error == 0 and
-    odrv1.axis0.motor.error == 0 and
-    odrv1.axis0.encoder.error == 0):
-
-    odrv1.axis0.motor.config.pre_calibrated = True
-    print("odrv1.axis0 calibration locked.")
-else:
-    print("odrv1.axis0 ERROR — not saving.")
-
-
-# =========================
-# ODRV1 AXIS1
-# =========================
-if (odrv1.axis1.error == 0 and
-    odrv1.axis1.motor.error == 0 and
-    odrv1.axis1.encoder.error == 0):
-
-    odrv1.axis1.motor.config.pre_calibrated = True
-    print("odrv1.axis1 calibration locked.")
-else:
-    print("odrv1.axis1 ERROR — not saving.")
-
-
-# ---- SAVE CONFIGURATION (ONLY ONCE PER BOARD) ----
-odrv0.save_configuration()
-odrv1.save_configuration()
-
-print("configuration saved.")
-
-
-# ---- FINAL ERROR DUMP ----
-odrive.utils.dump_errors(odrv0, True)
-odrive.utils.dump_errors(odrv1, True)
-
-odrv0.clear_errors()
-odrv1.clear_errors()
-
-
-print("--- Axis 0 (odrv0) ---")
-print(f"Motor Type: {odrv0.axis0.motor.config.motor_type}")
-print(f"Encoder Type: {odrv0.axis0.encoder.config.mode}")
-print(f"CPR: {odrv0.axis0.encoder.config.cpr}")
-print(f"Use Index: {odrv0.axis0.encoder.config.use_index}")
-print(f"Pre-Calibrated (Motor): {odrv0.axis0.motor.config.pre_calibrated}")
-print(f"Pre-Calibrated (Encoder): {odrv0.axis0.encoder.config.pre_calibrated}")
+    else:
+        print("Invalid selection.")
