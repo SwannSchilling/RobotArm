@@ -251,10 +251,10 @@ if ODrive == True:
     # odrv1.axis0.requested_state = INPUT_MODE_POS_FILTER
     # odrv1.axis1.requested_state = INPUT_MODE_POS_FILTER
 
-    odrv0.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    odrv0.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    odrv1.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    odrv1.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
+    # odrv0.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
+    # odrv0.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
+    # odrv1.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
+    # odrv1.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
 
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
