@@ -244,23 +244,20 @@ if ODrive == True:
         time.sleep(0.1)
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
-    
-    # Set Mode
-    # odrv0.axis0.requested_state = INPUT_MODE_POS_FILTER
-    # odrv0.axis1.requested_state = INPUT_MODE_POS_FILTER
-    # odrv1.axis0.requested_state = INPUT_MODE_POS_FILTER
-    # odrv1.axis1.requested_state = INPUT_MODE_POS_FILTER
-
-    # odrv0.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    # odrv0.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    # odrv1.axis0.controller.config.input_mode = INPUT_MODE_POS_FILTER
-    # odrv1.axis1.controller.config.input_mode = INPUT_MODE_POS_FILTER
 
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
     odrv0.clear_errors() 
     odrv1.clear_errors()
 
+    print("--- Axis 0 ---")
+    print(f"Motor Type: {odrv0.axis0.motor.config.motor_type}")
+    print(f"Encoder Type: {odrv0.axis0.encoder.config.mode}")
+    print(f"CPR: {odrv0.axis0.encoder.config.cpr}")
+    print(f"Use Index: {odrv0.axis0.encoder.config.use_index}")
+    print(f"Pre-Calibrated (Motor): {odrv0.axis0.motor.config.pre_calibrated}")
+    print(f"Pre-Calibrated (Encoder): {odrv0.axis0.encoder.config.pre_calibrated}")
+    
     def liveplot():
         start_liveplotter(lambda: [
             odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
