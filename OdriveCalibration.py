@@ -71,26 +71,79 @@ while odrv1.axis0.current_state != AXIS_STATE_IDLE:
     time.sleep(0.1)
 while odrv1.axis1.current_state != AXIS_STATE_IDLE:
     time.sleep(0.1)
+print("checking errors and locking motor calibration...")
 
-errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
-errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
-odrv0.clear_errors() 
+# =========================
+# ODRV0 AXIS0
+# =========================
+if (odrv0.axis0.error == 0 and
+    odrv0.axis0.motor.error == 0 and
+    odrv0.axis0.encoder.error == 0):
+
+    odrv0.axis0.motor.config.pre_calibrated = True
+    print("odrv0.axis0 calibration locked.")
+else:
+    print("odrv0.axis0 ERROR — not saving.")
+
+
+# =========================
+# ODRV0 AXIS1
+# =========================
+if (odrv0.axis1.error == 0 and
+    odrv0.axis1.motor.error == 0 and
+    odrv0.axis1.encoder.error == 0):
+
+    odrv0.axis1.motor.config.pre_calibrated = True
+    print("odrv0.axis1 calibration locked.")
+else:
+    print("odrv0.axis1 ERROR — not saving.")
+
+
+# =========================
+# ODRV1 AXIS0
+# =========================
+if (odrv1.axis0.error == 0 and
+    odrv1.axis0.motor.error == 0 and
+    odrv1.axis0.encoder.error == 0):
+
+    odrv1.axis0.motor.config.pre_calibrated = True
+    print("odrv1.axis0 calibration locked.")
+else:
+    print("odrv1.axis0 ERROR — not saving.")
+
+
+# =========================
+# ODRV1 AXIS1
+# =========================
+if (odrv1.axis1.error == 0 and
+    odrv1.axis1.motor.error == 0 and
+    odrv1.axis1.encoder.error == 0):
+
+    odrv1.axis1.motor.config.pre_calibrated = True
+    print("odrv1.axis1 calibration locked.")
+else:
+    print("odrv1.axis1 ERROR — not saving.")
+
+
+# ---- SAVE CONFIGURATION (ONLY ONCE PER BOARD) ----
+odrv0.save_configuration()
+odrv1.save_configuration()
+
+print("configuration saved.")
+
+
+# ---- FINAL ERROR DUMP ----
+odrive.utils.dump_errors(odrv0, True)
+odrive.utils.dump_errors(odrv1, True)
+
+odrv0.clear_errors()
 odrv1.clear_errors()
 
-print("--- Axis 0 ---")
+
+print("--- Axis 0 (odrv0) ---")
 print(f"Motor Type: {odrv0.axis0.motor.config.motor_type}")
 print(f"Encoder Type: {odrv0.axis0.encoder.config.mode}")
 print(f"CPR: {odrv0.axis0.encoder.config.cpr}")
 print(f"Use Index: {odrv0.axis0.encoder.config.use_index}")
 print(f"Pre-Calibrated (Motor): {odrv0.axis0.motor.config.pre_calibrated}")
 print(f"Pre-Calibrated (Encoder): {odrv0.axis0.encoder.config.pre_calibrated}")
-
-def liveplot():
-    start_liveplotter(lambda: [
-        odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
-        odrv0.axis1.encoder.pos_estimate,              # Position estimate of axis1
-        odrv0.axis1.controller.pos_setpoint            # Position setpoint of axis1
-    ])
-
-else:
-print("❌ Not connecting to the Odrive this time...")
