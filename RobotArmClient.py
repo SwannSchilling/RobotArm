@@ -229,12 +229,11 @@ if ODrive == True:
     odrv1.axis0.motor.config.calibration_current = calibration_current
     odrv1.axis1.motor.config.calibration_current = calibration_current
 
-    # --- ROLLED BACK TO STANDARD CALIBRATION ---
-    print("starting calibration...")
-    odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    print("starting encoder offset calibration...")
+    odrv0.axis0.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
+    odrv0.axis1.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
+    odrv1.axis0.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
+    odrv1.axis1.requested_state = AXIS_STATE_ENCODER_OFFSET_CALIBRATION
 
     while odrv0.axis0.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
@@ -244,6 +243,21 @@ if ODrive == True:
         time.sleep(0.1)
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
+
+    # print("starting calibration...")
+    # odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    # odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+
+    # while odrv0.axis0.current_state != AXIS_STATE_IDLE:
+    #     time.sleep(0.1)
+    # while odrv0.axis1.current_state != AXIS_STATE_IDLE:
+    #     time.sleep(0.1)
+    # while odrv1.axis0.current_state != AXIS_STATE_IDLE:
+    #     time.sleep(0.1)
+    # while odrv1.axis1.current_state != AXIS_STATE_IDLE:
+    #     time.sleep(0.1)
 
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
@@ -257,7 +271,7 @@ if ODrive == True:
     print(f"Use Index: {odrv0.axis0.encoder.config.use_index}")
     print(f"Pre-Calibrated (Motor): {odrv0.axis0.motor.config.pre_calibrated}")
     print(f"Pre-Calibrated (Encoder): {odrv0.axis0.encoder.config.pre_calibrated}")
-    
+
     def liveplot():
         start_liveplotter(lambda: [
             odrv0.axis1.motor.current_control.Iq_measured,  # Current drawn by axis1
