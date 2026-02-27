@@ -8,7 +8,7 @@ controller = WaveshareServoController(servo_ids)
 
 # Move servos smoothly via background thread
 controller.set_target_position(1, 2000)
-controller.set_multiple_targets({2: 1000, 3: 3000})
+controller.set_multiple_targets({2: 2000, 3: 2000})
 
 # Clean shutdown
 controller.close()
