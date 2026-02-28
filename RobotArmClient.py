@@ -498,6 +498,8 @@ def poll_flask():
             #         except Exception as e:
             #             print(f"Serial Read Error: {e}")
 
+            global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
             if OpenCM:
                 try:
                     raw_val = int(motorPositions[7])
