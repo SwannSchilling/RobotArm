@@ -44,6 +44,13 @@ gripper_open = 180
 gripper_closed = 40
 current_gripper_val = gripper_open # Initialize state memory
 
+GRIPPER_OPEN = 180
+GRIPPER_CLOSED = 40
+MIN_DELTA = 2          # Ignore tiny changes (servo jitter guard)
+SERIAL_RATE = 0.02     # 50 Hz max send rate
+last_serial_time = 0
+current_gripper_val = -1
+
 if Waveshare == True:
     controller = WaveshareServoController(
     servo_ids=[1, 2, 3],
@@ -185,6 +192,20 @@ def scale(val, src, dst):
     Scale the given value from the scale of src to the scale of dst.
     """
     return ((val - src[0]) / (src[1]-src[0])) * (dst[1]-dst[0]) + dst[0]
+
+def map_gripper_to_servo(raw_val):
+    # Clamp Unity input range first (never trust upstream)
+    raw_val = max(0, min(255, raw_val))
+
+    # Linear mapping: 0–255 → GRIPPER_CLOSED–GRIPPER_OPEN
+    servo = GRIPPER_CLOSED + (
+        (raw_val / 255.0) * (GRIPPER_OPEN - GRIPPER_CLOSED)
+    )
+
+    # Redundant hardware clamp (hard safety layer)
+    servo = max(GRIPPER_CLOSED, min(GRIPPER_OPEN, servo))
+
+    return int(servo)
 
 if ODrive == True:
     print("finding an odrive...")
@@ -479,16 +500,19 @@ def poll_flask():
 
             if OpenCM:
                 try:
-                    # Unity now sends 0–255 directly
-                    gripper_val = int(motorPositions[7])
+                    raw_val = int(motorPositions[7])
+                    servo_val = map_gripper_to_servo(raw_val)
 
-                    # Safety clamp (never trust upstream fully)
-                    gripper_val = max(0, min(255, gripper_val))
+                    now = time.time()
 
-                    # Only send if value changed (prevents serial flooding)
-                    if gripper_val != current_gripper_val:
-                        current_gripper_val = gripper_val
+                    # Rate limit + jitter guard
+                    if (
+                        abs(servo_val - current_gripper_val) >= MIN_DELTA and
+                        now - last_serial_time >= SERIAL_RATE
+                    ):
+                        current_gripper_val = servo_val
                         serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+                        last_serial_time = now
                         # print(f"Sent to OpenCM: {current_gripper_val}")
 
                 except ValueError:
