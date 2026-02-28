@@ -453,30 +453,55 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-            if OpenCM: 
-                gripper_state = int(motorPositions[7])
+            # if OpenCM: 
+            #     gripper_state = int(motorPositions[7])
                 
-                # Matches your comment: 1 for Close, 2 for Open
-                mapping = {1: gripper_closed, 2: gripper_open}
+            #     # Matches your comment: 1 for Close, 2 for Open
+            #     mapping = {1: gripper_closed, 2: gripper_open}
                 
-                new_val = mapping.get(gripper_state)
+            #     new_val = mapping.get(gripper_state)
 
-                # 1. Only act if the trigger is state 1 or 2
-                # 2. Only act if the state actually CHANGED (prevents serial flooding)
-                if new_val is not None and new_val != current_gripper_val:
-                    current_gripper_val = new_val
-                    serial_OpenCM.write(f"{current_gripper_val}\n".encode())
-                    print(f"Sent to OpenCM: {current_gripper_val}")
+            #     # 1. Only act if the trigger is state 1 or 2
+            #     # 2. Only act if the state actually CHANGED (prevents serial flooding)
+            #     if new_val is not None and new_val != current_gripper_val:
+            #         current_gripper_val = new_val
+            #         serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #         print(f"Sent to OpenCM: {current_gripper_val}")
 
-                # Non-blocking feedback read
-                if serial_OpenCM.in_waiting > 0:
-                    try:
-                        # strip() removes the \n from the Arduino print
-                        response = serial_OpenCM.readline().decode().strip()
-                        print(f"OpenCM Feedback: {response}")
-                    except Exception as e:
-                        print(f"Serial Read Error: {e}")
+            #     # Non-blocking feedback read
+            #     if serial_OpenCM.in_waiting > 0:
+            #         try:
+            #             # strip() removes the \n from the Arduino print
+            #             response = serial_OpenCM.readline().decode().strip()
+            #             print(f"OpenCM Feedback: {response}")
+            #         except Exception as e:
+            #             print(f"Serial Read Error: {e}")
 
+            if OpenCM:
+                try:
+                    # Unity now sends 0–255 directly
+                    gripper_val = int(motorPositions[7])
+
+                    # Safety clamp (never trust upstream fully)
+                    gripper_val = max(0, min(255, gripper_val))
+
+                    # Only send if value changed (prevents serial flooding)
+                    if gripper_val != current_gripper_val:
+                        current_gripper_val = gripper_val
+                        serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+                        # print(f"Sent to OpenCM: {current_gripper_val}")
+
+                except ValueError:
+                    print("Invalid gripper value received")
+
+                # # Non-blocking feedback read
+                # if serial_OpenCM.in_waiting > 0:
+                #     try:
+                #         response = serial_OpenCM.readline().decode().strip()
+                #         print(f"OpenCM Feedback: {response}")
+                #     except Exception as e:
+                #         print(f"Serial Read Error: {e}")
+                        
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
             #         serial_Gripper.open()
