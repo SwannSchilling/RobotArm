@@ -498,7 +498,9 @@ def poll_flask():
             #         except Exception as e:
             #             print(f"Serial Read Error: {e}")
 
-             # 🔍 ADD THIS DEBUG LOGGING
+            global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
+            # 🔍 ADD THIS DEBUG LOGGING
             gripper_255 = int(motorPositions[7])
             print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255 (raw={values[7]:.4f})")
             
@@ -522,7 +524,8 @@ def poll_flask():
                     print(f"   ❌ Serial write failed: {e}")
             else:
                 print(f"   ⚠️ SKIPPED (delta={delta:.1f}, time={time_since_last:.3f})")
-                global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
             
             # if OpenCM:
             #     try:
