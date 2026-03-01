@@ -15,6 +15,9 @@ import math
 import socket
 from WaveshareServoController import WaveshareServoController
 
+
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 ODrive = True  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
 SPM = False  # Set to False if not using Storm32
@@ -502,7 +505,7 @@ def poll_flask():
             
             # 🔍 ADD THIS DEBUG LOGGING
             gripper_255 = int(motorPositions[7])
-            print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255 (raw={values[7]:.4f})")
+            print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255")
             
             # Your existing OpenCM code with debug
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
