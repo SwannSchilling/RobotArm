@@ -13,6 +13,7 @@ import requests
 import sys
 import math 
 import socket
+import numpy as np
 from WaveshareServoController import WaveshareServoController
 
 
