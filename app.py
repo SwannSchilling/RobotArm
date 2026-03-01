@@ -9,8 +9,8 @@ import logging
 import os
 import platform
 
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-
+# logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').disabled = True
 
 collect_data = True
 
