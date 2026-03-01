@@ -9,6 +9,7 @@ import logging
 import os
 import platform
 
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 
 collect_data = True
