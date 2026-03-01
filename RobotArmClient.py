@@ -16,7 +16,7 @@ import socket
 from WaveshareServoController import WaveshareServoController
 
 
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+# logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 ODrive = True  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
@@ -501,32 +501,32 @@ def poll_flask():
             #         except Exception as e:
             #             print(f"Serial Read Error: {e}")
 
-            global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
             
-            # 🔍 ADD THIS DEBUG LOGGING
-            gripper_255 = int(motorPositions[7])
-            print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255")
+            # # 🔍 ADD THIS DEBUG LOGGING
+            # gripper_255 = int(motorPositions[7])
+            # print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255")
             
-            # Your existing OpenCM code with debug
-            global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            # # Your existing OpenCM code with debug
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
             
-            now = time.time()
-            delta = abs(gripper_255 - current_gripper_val)
-            time_since_last = now - last_serial_time
+            # now = time.time()
+            # delta = abs(gripper_255 - current_gripper_val)
+            # time_since_last = now - last_serial_time
             
-            print(f"   Delta: {delta} (MIN_DELTA={MIN_DELTA})")
-            print(f"   Time since last: {time_since_last:.3f}s (SERIAL_RATE={SERIAL_RATE})")
+            # print(f"   Delta: {delta} (MIN_DELTA={MIN_DELTA})")
+            # print(f"   Time since last: {time_since_last:.3f}s (SERIAL_RATE={SERIAL_RATE})")
             
-            if delta >= MIN_DELTA and time_since_last >= SERIAL_RATE:
-                current_gripper_val = gripper_255
-                print(f"   ✅ SENDING to OpenCM: {current_gripper_val}")
-                try:
-                    serial_OpenCM.write(f"{current_gripper_val}\n".encode())
-                    last_serial_time = now
-                except Exception as e:
-                    print(f"   ❌ Serial write failed: {e}")
-            else:
-                print(f"   ⚠️ SKIPPED (delta={delta:.1f}, time={time_since_last:.3f})")
+            # if delta >= MIN_DELTA and time_since_last >= SERIAL_RATE:
+            #     current_gripper_val = gripper_255
+            #     print(f"   ✅ SENDING to OpenCM: {current_gripper_val}")
+            #     try:
+            #         serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #         last_serial_time = now
+            #     except Exception as e:
+            #         print(f"   ❌ Serial write failed: {e}")
+            # else:
+            #     print(f"   ⚠️ SKIPPED (delta={delta:.1f}, time={time_since_last:.3f})")
             
             # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
             
@@ -557,7 +557,47 @@ def poll_flask():
                 #         print(f"OpenCM Feedback: {response}")
                 #     except Exception as e:
                 #         print(f"Serial Read Error: {e}")
-                        
+
+            global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+
+            GRIPPER_OPEN = 180
+            GRIPPER_CLOSED = 40
+
+            if OpenCM:
+                try:
+                    raw_val = int(motorPositions[7])
+
+                    # Dataset → servo mapping
+                    servo_val = map_gripper_to_servo(raw_val)
+
+                    # -------------------------------------------------
+                    # SAFETY CLAMP (HARD LIMITS)
+                    # -------------------------------------------------
+                    servo_val = int(np.clip(
+                        servo_val,
+                        GRIPPER_CLOSED,
+                        GRIPPER_OPEN
+                    ))
+
+                    now = time.time()
+
+                    # -------------------------------------------------
+                    # Rate limit + jitter guard
+                    # -------------------------------------------------
+                    if (
+                        abs(servo_val - current_gripper_val) >= MIN_DELTA and
+                        now - last_serial_time >= SERIAL_RATE
+                    ):
+                        current_gripper_val = servo_val
+                        serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+                        last_serial_time = now
+
+                        # Optional debug
+                        print(f"Sent to OpenCM: {current_gripper_val}")
+                        print(f"Gripper raw:{raw_val} mapped:{servo_val}")
+                except ValueError:
+                    print("Invalid gripper value received")
+
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
             #         serial_Gripper.open()
