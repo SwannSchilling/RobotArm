@@ -528,15 +528,23 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-                time.sleep(0.02)  # Let the write finish and bus settle
+                try:
+                    time.sleep(0.02)
+                    angles = {}
+                    for servo_id in [1, 2, 3]:
+                        try:
+                            angles[servo_id] = controller.read_angle(servo_id)
+                            time.sleep(0.005)  # small gap between each read
+                        except Exception as e:
+                            print(f"Servo {servo_id} read failed: {e}")
+                            angles[servo_id] = None
 
-                servo_angles = controller.read_all_angles()
-                if len(servo_angles) >= 3:
-                    print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
-                    print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={servo_angles[2]:.2f}°")
-                    print(f"Servo3 | cmd={LowerRing:.2f}° | actual={servo_angles[3]:.2f}°")
-                else:
-                    print(f"Servo read incomplete ({len(servo_angles)} servo(s) responded)")
+                    if all(angles[i] is not None for i in [1, 2, 3]):
+                        print(f"Servo1 | cmd={UpperRing:.2f}° | actual={angles[1]:.2f}°")
+                        print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={angles[2]:.2f}°")
+                        print(f"Servo3 | cmd={LowerRing:.2f}° | actual={angles[3]:.2f}°")
+                except Exception as e:
+                    print(f"Servo read error: {e}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
