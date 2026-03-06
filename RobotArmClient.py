@@ -527,12 +527,16 @@ def poll_flask():
                     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
+                
+                time.sleep(0.02)  # Let the write finish and bus settle
 
-                # time.sleep(0.02)  # Give servos 20ms to process before reading back
-                # servo_angles = controller.read_all_angles()
-                # print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
-                # print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={servo_angles[2]:.2f}°")
-                # print(f"Servo3 | cmd={LowerRing:.2f}° | actual={servo_angles[3]:.2f}°")
+                servo_angles = controller.read_all_angles()
+                if len(servo_angles) >= 3:
+                    print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
+                    print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={servo_angles[2]:.2f}°")
+                    print(f"Servo3 | cmd={LowerRing:.2f}° | actual={servo_angles[3]:.2f}°")
+                else:
+                    print(f"Servo read incomplete ({len(servo_angles)} servo(s) responded)")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
