@@ -527,7 +527,7 @@ def poll_flask():
                     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
-                
+                time.sleep(0.02)  # Give servos 20ms to process before reading back
                 servo_angles = controller.read_all_angles()
                 print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
                 print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={servo_angles[2]:.2f}°")
