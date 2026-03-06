@@ -21,3 +21,9 @@ with WaveshareServoController([1, 2, 3]) as controller:
 # Method 3: Manual control without background thread
 controller = WaveshareServoController([1, 2, 3], auto_start_thread=False)
 controller.set_servo_position(1, 2000, blocking=True)
+
+print(controller.read_all_angles())
+print(controller.read_all_positions())
+
+print(controller.read_servo_angle(1))
+

@@ -417,58 +417,22 @@ def poll_flask():
                         idle_flag = False
                     last_position_change_time = current_time
 
-                    # # Set all motors to CLOSED_LOOP_CONTROL if they are currently in IDLE state
-                    # if previous_states['axis1'] == AXIS_STATE_IDLE:
-                    #     odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    # odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
-
-                    # if previous_states['axis0'] == AXIS_STATE_IDLE:
-                    #     odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    # odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
-
-                    # if previous_states['axis3'] == AXIS_STATE_IDLE:
-                    #     odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    # odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
-
-                    # if previous_states['axis2'] == AXIS_STATE_IDLE:
-                    #     odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    # odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
-
-                    # Axis 1 (odrv1.axis1)
-                    cmd_base = new_positions[0] + axis_0
+                    # Set all motors to CLOSED_LOOP_CONTROL if they are currently in IDLE state
                     if previous_states['axis1'] == AXIS_STATE_IDLE:
                         odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv1.axis1.controller.input_pos = cmd_base
+                    odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
 
-                    print(f"Base: cmd={cmd_base:.2f} deg | enc={encoderBase_Rotation:.2f} deg")
-
-
-                    # Axis 0 (odrv1.axis0)
-                    cmd_lower = new_positions[1] + axis_1
                     if previous_states['axis0'] == AXIS_STATE_IDLE:
                         odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv1.axis0.controller.input_pos = cmd_lower
+                    odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
 
-                    print(f"LowerHinge: cmd={cmd_lower:.2f} deg | enc={encoderLowerHinge_Rotation:.2f} deg")
-
-
-                    # Axis 1 (odrv0.axis1)
-                    cmd_upper = new_positions[2] + axis_2
                     if previous_states['axis3'] == AXIS_STATE_IDLE:
                         odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv0.axis1.controller.input_pos = cmd_upper
+                    odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
 
-                    print(f"UpperHinge: cmd={cmd_upper:.2f} deg | enc={encoderUpperHinge_Rotation:.2f} deg")
-
-
-                    # Axis 0 (odrv0.axis0)
-                    cmd_ee = new_positions[3] + axis_3
                     if previous_states['axis2'] == AXIS_STATE_IDLE:
                         odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv0.axis0.controller.input_pos = cmd_ee
-
-                    print(f"EndEffector: cmd={cmd_ee:.2f} deg | enc={encoderEndEffector_Rotation:.2f} deg")
-
+                    odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
 
                 elif current_time - last_position_change_time > idle_timeout:
                     if not idle_flag:
@@ -514,9 +478,86 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-                print(f"Servo1 | cmd={cmd_servo1:.2f}° | actual={servo_angles[1]:.2f}°")
-                print(f"Servo2 | cmd={cmd_servo2:.2f}° | actual={servo_angles[2]:.2f}°")
-                print(f"Servo3 | cmd={cmd_servo3:.2f}° | actual={servo_angles[3]:.2f}°")
+            # if OpenCM: 
+            #     gripper_state = int(motorPositions[7])
+                
+            #     # Matches your comment: 1 for Close, 2 for Open
+            #     mapping = {1: gripper_closed, 2: gripper_open}
+                
+            #     new_val = mapping.get(gripper_state)
+
+            #     # 1. Only act if the trigger is state 1 or 2
+            #     # 2. Only act if the state actually CHANGED (prevents serial flooding)
+            #     if new_val is not None and new_val != current_gripper_val:
+            #         current_gripper_val = new_val
+            #         serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #         print(f"Sent to OpenCM: {current_gripper_val}")
+
+            #     # Non-blocking feedback read
+            #     if serial_OpenCM.in_waiting > 0:
+            #         try:
+            #             # strip() removes the \n from the Arduino print
+            #             response = serial_OpenCM.readline().decode().strip()
+            #             print(f"OpenCM Feedback: {response}")
+            #         except Exception as e:
+            #             print(f"Serial Read Error: {e}")
+
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
+            # # 🔍 ADD THIS DEBUG LOGGING
+            # gripper_255 = int(motorPositions[7])
+            # print(f"🔍 [{time.time():.3f}] Received gripper: {gripper_255}/255")
+            
+            # # Your existing OpenCM code with debug
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
+            # now = time.time()
+            # delta = abs(gripper_255 - current_gripper_val)
+            # time_since_last = now - last_serial_time
+            
+            # print(f"   Delta: {delta} (MIN_DELTA={MIN_DELTA})")
+            # print(f"   Time since last: {time_since_last:.3f}s (SERIAL_RATE={SERIAL_RATE})")
+            
+            # if delta >= MIN_DELTA and time_since_last >= SERIAL_RATE:
+            #     current_gripper_val = gripper_255
+            #     print(f"   ✅ SENDING to OpenCM: {current_gripper_val}")
+            #     try:
+            #         serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #         last_serial_time = now
+            #     except Exception as e:
+            #         print(f"   ❌ Serial write failed: {e}")
+            # else:
+            #     print(f"   ⚠️ SKIPPED (delta={delta:.1f}, time={time_since_last:.3f})")
+            
+            # global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
+            
+            # if OpenCM:
+            #     try:
+            #         raw_val = int(motorPositions[7])
+            #         servo_val = map_gripper_to_servo(raw_val)
+
+            #         now = time.time()
+
+            #         # Rate limit + jitter guard
+            #         if (
+            #             abs(servo_val - current_gripper_val) >= MIN_DELTA and
+            #             now - last_serial_time >= SERIAL_RATE
+            #         ):
+            #             current_gripper_val = servo_val
+            #             serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #             last_serial_time = now
+            #             # print(f"Sent to OpenCM: {current_gripper_val}")
+
+            #     except ValueError:
+            #         print("Invalid gripper value received")
+
+                # # Non-blocking feedback read
+                # if serial_OpenCM.in_waiting > 0:
+                #     try:
+                #         response = serial_OpenCM.readline().decode().strip()
+                #         print(f"OpenCM Feedback: {response}")
+                #     except Exception as e:
+                #         print(f"Serial Read Error: {e}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
@@ -557,14 +598,6 @@ def poll_flask():
                         print(f"Gripper raw:{raw_val} mapped:{servo_val}")
                 except ValueError:
                     print("Invalid gripper value received")
-
-                # Non-blocking feedback read
-                if serial_OpenCM.in_waiting > 0:
-                    try:
-                        response = serial_OpenCM.readline().decode().strip()
-                        print(f"OpenCM Feedback: {response}")
-                    except Exception as e:
-                        print(f"Serial Read Error: {e}")
 
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
