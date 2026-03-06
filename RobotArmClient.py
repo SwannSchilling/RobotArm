@@ -527,6 +527,7 @@ def poll_flask():
                     2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
+
                 time.sleep(0.02)  # Give servos 20ms to process before reading back
                 servo_angles = controller.read_all_angles()
                 print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
@@ -573,13 +574,13 @@ def poll_flask():
                 except ValueError:
                     print("Invalid gripper value received")
 
-                # Non-blocking feedback read
-                if serial_OpenCM.in_waiting > 0:
-                    try:
-                        response = serial_OpenCM.readline().decode().strip()
-                        print(f"OpenCM Feedback: {response}")
-                    except Exception as e:
-                        print(f"Serial Read Error: {e}")
+                # # Non-blocking feedback read
+                # if serial_OpenCM.in_waiting > 0:
+                #     try:
+                #         response = serial_OpenCM.readline().decode().strip()
+                #         print(f"OpenCM Feedback: {response}")
+                #     except Exception as e:
+                #         print(f"Serial Read Error: {e}")
 
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
