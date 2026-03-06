@@ -539,48 +539,48 @@ def poll_flask():
             GRIPPER_OPEN = 180
             GRIPPER_CLOSED = 40
 
-            if OpenCM:
-                try:
-                    raw_val = int(motorPositions[7])
+            # if OpenCM:
+            #     try:
+            #         raw_val = int(motorPositions[7])
 
-                    # Dataset → servo mapping
-                    servo_val = map_gripper_to_servo(raw_val)
+            #         # Dataset → servo mapping
+            #         servo_val = map_gripper_to_servo(raw_val)
 
-                    # -------------------------------------------------
-                    # SAFETY CLAMP (HARD LIMITS)
-                    # -------------------------------------------------
-                    servo_val = int(np.clip(
-                        servo_val,
-                        GRIPPER_CLOSED,
-                        GRIPPER_OPEN
-                    ))
+            #         # -------------------------------------------------
+            #         # SAFETY CLAMP (HARD LIMITS)
+            #         # -------------------------------------------------
+            #         servo_val = int(np.clip(
+            #             servo_val,
+            #             GRIPPER_CLOSED,
+            #             GRIPPER_OPEN
+            #         ))
 
-                    now = time.time()
+            #         now = time.time()
 
-                    # -------------------------------------------------
-                    # Rate limit + jitter guard
-                    # -------------------------------------------------
-                    if (
-                        abs(servo_val - current_gripper_val) >= MIN_DELTA and
-                        now - last_serial_time >= SERIAL_RATE
-                    ):
-                        current_gripper_val = servo_val
-                        serial_OpenCM.write(f"{current_gripper_val}\n".encode())
-                        last_serial_time = now
+            #         # -------------------------------------------------
+            #         # Rate limit + jitter guard
+            #         # -------------------------------------------------
+            #         if (
+            #             abs(servo_val - current_gripper_val) >= MIN_DELTA and
+            #             now - last_serial_time >= SERIAL_RATE
+            #         ):
+            #             current_gripper_val = servo_val
+            #             serial_OpenCM.write(f"{current_gripper_val}\n".encode())
+            #             last_serial_time = now
 
-                        # Optional debug
-                        print(f"Sent to OpenCM: {current_gripper_val}")
-                        print(f"Gripper raw:{raw_val} mapped:{servo_val}")
-                except ValueError:
-                    print("Invalid gripper value received")
+            #             # Optional debug
+            #             print(f"Sent to OpenCM: {current_gripper_val}")
+            #             print(f"Gripper raw:{raw_val} mapped:{servo_val}")
+            #     except ValueError:
+            #         print("Invalid gripper value received")
 
-                # # Non-blocking feedback read
-                # if serial_OpenCM.in_waiting > 0:
-                #     try:
-                #         response = serial_OpenCM.readline().decode().strip()
-                #         print(f"OpenCM Feedback: {response}")
-                #     except Exception as e:
-                #         print(f"Serial Read Error: {e}")
+            #     # Non-blocking feedback read
+            #     if serial_OpenCM.in_waiting > 0:
+            #         try:
+            #             response = serial_OpenCM.readline().decode().strip()
+            #             print(f"OpenCM Feedback: {response}")
+            #         except Exception as e:
+            #             print(f"Serial Read Error: {e}")
 
             # if Gripper == True:
             #     if not serial_Gripper.is_open:
