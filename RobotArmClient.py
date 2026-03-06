@@ -434,6 +434,20 @@ def poll_flask():
                     #     odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                     # odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
 
+                    encoderTurns = [
+                        odrv0.axis0.encoder.pos_estimate,  # EndEffector (axis2)
+                        odrv0.axis1.encoder.pos_estimate,  # UpperHinge  (axis3)
+                        odrv1.axis0.encoder.pos_estimate,  # LowerHinge  (axis0)
+                        odrv1.axis1.encoder.pos_estimate   # Base        (axis1)
+                    ]
+
+                    encoderPositions = [t * 360 for t in encoderTurns]
+
+                    encoderEndEffector_Rotation = encoderPositions[0]
+                    encoderUpperHinge_Rotation  = encoderPositions[1]
+                    encoderLowerHinge_Rotation  = encoderPositions[2]
+                    encoderBase_Rotation        = encoderPositions[3]
+
                     # Axis 1 (odrv1.axis1)
                     cmd_base = new_positions[0] + axis_0
                     if previous_states['axis1'] == AXIS_STATE_IDLE:
@@ -514,9 +528,10 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-                print(f"Servo1 | cmd={cmd_servo1:.2f}° | actual={servo_angles[1]:.2f}°")
-                print(f"Servo2 | cmd={cmd_servo2:.2f}° | actual={servo_angles[2]:.2f}°")
-                print(f"Servo3 | cmd={cmd_servo3:.2f}° | actual={servo_angles[3]:.2f}°")
+                servo_angles = controller.read_all_angles()
+                print(f"Servo1 | cmd={UpperRing:.2f}° | actual={servo_angles[1]:.2f}°")
+                print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={servo_angles[2]:.2f}°")
+                print(f"Servo3 | cmd={LowerRing:.2f}° | actual={servo_angles[3]:.2f}°")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
