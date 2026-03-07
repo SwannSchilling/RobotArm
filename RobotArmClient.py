@@ -15,6 +15,7 @@ import math
 import socket
 import numpy as np
 from WaveshareServoController import WaveshareServoController
+from flask import Flask
 
 # Top of file — shared between control loop and Flask
 latest_obs = {
@@ -27,7 +28,47 @@ latest_act = {
 }
 obs_act_lock = threading.Lock()
 
-# logging.getLogger('werkzeug').setLevel(logging.ERROR)
+app = Flask(__name__)
+# Suppress Flask's default logging
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+# Flask routes
+@app.route('/return_positions', methods=['GET','POST'])
+def return_positions():
+    motorPositions = collect_position_data
+    print(motorPositions)
+    return json.dumps(motorPositions)
+
+# @app.route("/return_positions")
+# def return_positions():
+#     """Return current observations (encoder positions)"""
+#     with obs_act_lock:
+#         obs = latest_obs.copy()
+#     values = [
+#         obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
+#         obs['base'], obs['lower_hinge'], obs['upper_hinge'],
+#         obs['end_effector'], obs['gripper']
+#     ]
+#     return "&".join(str(round(v, 4)) for v in values)
+
+@app.route("/return_commands")
+def return_commands():
+    """Return current actions (setpoint commands)"""
+    with obs_act_lock:
+        act = latest_act.copy()
+    values = [
+        act['upper_ring'], act['middle_ring'], act['lower_ring'],
+        act['base'], act['lower_hinge'], act['upper_hinge'],
+        act['end_effector'], act['gripper']
+    ]
+    return "&".join(str(round(v, 4)) for v in values)
+
+# Flask server function
+def run_flask():
+    """Run Flask server in separate thread"""
+    app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False, threaded=True)
 
 ODrive = True  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
@@ -50,7 +91,6 @@ start_moving = True
 
 # --- FIX: Initialize global variables to prevent crashes ---
 posOffset = 0 
-stored_positions = [0,0,0]
 serial_Pico = None 
 idle_flag = False
 position_changed_flag = False
@@ -74,8 +114,6 @@ if Waveshare == True:
     )
 else:
     print("Not connecting to the Waveshare this time...")
-
-position = ''
 
 # Device finder function
 def find_device(vid, pid):
@@ -160,9 +198,6 @@ else:
     print("❌ Waveshare Servo Adapter not found.")
 
 
-# Initialize variables      
-counter_num = 0
-
 class Motor:
     """
     Manages motor positions.
@@ -184,10 +219,7 @@ class Motor:
     def apply_scale(self):
         self.value = int(self.value * self.scale)
 
-motor_a = Motor("a",0)
-motor_b = Motor("b",0)
-motor_c = Motor("c",0)
-
+# Axis Offests if needed
 axis_0 = 0
 axis_1 = 0
 axis_2 = 0
@@ -281,6 +313,11 @@ if ODrive == True:
 
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
+
+    if errors_odrv0 or errors_odrv1:
+        print("Calibration errors detected!")
+        sys.exit(1)
+    
     odrv0.clear_errors() 
     odrv1.clear_errors()
 
@@ -334,7 +371,6 @@ def read_serial():
             break
 
 def poll_flask():
-    global posOffset
     global current_gripper_val
     global gripper_closed
     global gripper_open 
@@ -488,6 +524,18 @@ def poll_flask():
                 odrive_states['axis3'] = odrv0.axis1.current_state
                 odrive_states['axis2'] = odrv0.axis0.current_state
 
+                 # ODrive observations (encoder)
+                obs_base  = -(odrv1.axis1.encoder.pos_estimate / 50) * 360
+                obs_lower = -(odrv1.axis0.encoder.pos_estimate / 50) * 360
+                obs_upper =  (odrv0.axis1.encoder.pos_estimate / 40) * 360
+                obs_ee    =  (odrv0.axis0.encoder.pos_estimate / 40) * 360
+
+                # ODrive actions (setpoint)
+                act_base  = -(odrv1.axis1.controller.pos_setpoint / 50) * 360
+                act_lower = -(odrv1.axis0.controller.pos_setpoint / 50) * 360
+                act_upper =  (odrv0.axis1.controller.pos_setpoint / 40) * 360
+                act_ee    =  (odrv0.axis0.controller.pos_setpoint / 40) * 360
+
             if SPM_Waveshare:
                 upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
                 middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
@@ -498,6 +546,12 @@ def poll_flask():
                     2: middle_cmd,
                     3: lower_cmd
                 })
+
+                # Ring servos
+                cached = controller.get_cached_angles()
+                upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
+                middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
+                lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
@@ -560,26 +614,6 @@ def poll_flask():
             #         #serial_Gripper.write(b'0')
             #         serial_Gripper.close()
 
-            # ODrive observations (encoder)
-            obs_base  = -(odrv1.axis1.encoder.pos_estimate / 50) * 360
-            obs_lower = -(odrv1.axis0.encoder.pos_estimate / 50) * 360
-            obs_upper =  (odrv0.axis1.encoder.pos_estimate / 40) * 360
-            obs_ee    =  (odrv0.axis0.encoder.pos_estimate / 40) * 360
-
-            # ODrive actions (setpoint)
-            act_base  = -(odrv1.axis1.controller.pos_setpoint / 50) * 360
-            act_lower = -(odrv1.axis0.controller.pos_setpoint / 50) * 360
-            act_upper =  (odrv0.axis1.controller.pos_setpoint / 40) * 360
-            act_ee    =  (odrv0.axis0.controller.pos_setpoint / 40) * 360
-
-            # Ring servos
-            cached = controller.get_cached_angles()
-            upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
-            middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
-            lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
-
-            controller.set_multiple_target_angles({1: upper_cmd, 2: middle_cmd, 3: lower_cmd})
-
             # Atomically update shared state
             with obs_act_lock:
                 latest_obs.update({
@@ -613,24 +647,60 @@ def shutdown_motors():
     except Exception as e:
         print(f"Error during motor shutdown: {e}")
 
-# Create and start threads
-serial_thread = threading.Thread(target=read_serial, name="SerialReader")
-flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
+# # Create and start threads
+# serial_thread = threading.Thread(target=read_serial, name="SerialReader")
+# flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
 
-# Don't use daemon threads - we want controlled shutdown
+# # Don't use daemon threads - we want controlled shutdown
+# serial_thread.start()
+# flask_thread.start()
+
+# try:
+#     # Wait for either thread to finish or event to be cleared
+#     while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
+#         time.sleep(0.1)
+    
+#     # If we get here due to overheat, wait a moment for both threads to finish cleanly
+#     if not running_event.is_set():
+#         print("Waiting for threads to finish...")
+#         serial_thread.join(timeout=1.0)
+#         flask_thread.join(timeout=1.0)
+        
+# except KeyboardInterrupt:
+#     print("\nUser interruption. Stopping...")
+#     running_event.clear()
+#     shutdown_motors()
+
+# # Final cleanup - wait for threads to finish
+# serial_thread.join(timeout=2.0)
+# flask_thread.join(timeout=2.0)
+
+# print("System stopped.")
+# sys.exit()
+
+# Create and start threads
+serial_thread = threading.Thread(target=read_serial, name="SerialReader", daemon=False)
+flask_poller_thread = threading.Thread(target=poll_flask, name="FlaskPoller", daemon=False)
+flask_server_thread = threading.Thread(target=run_flask, name="FlaskServer", daemon=True)
+
+# Start all threads
+print("Starting Flask server on http://0.0.0.0:5001")
+flask_server_thread.start()
+time.sleep(0.5)  # Give Flask a moment to start
+
 serial_thread.start()
-flask_thread.start()
+flask_poller_thread.start()
 
 try:
     # Wait for either thread to finish or event to be cleared
-    while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
+    while running_event.is_set() and (serial_thread.is_alive() or flask_poller_thread.is_alive()):
         time.sleep(0.1)
     
     # If we get here due to overheat, wait a moment for both threads to finish cleanly
     if not running_event.is_set():
         print("Waiting for threads to finish...")
         serial_thread.join(timeout=1.0)
-        flask_thread.join(timeout=1.0)
+        flask_poller_thread.join(timeout=1.0)
         
 except KeyboardInterrupt:
     print("\nUser interruption. Stopping...")
@@ -639,7 +709,8 @@ except KeyboardInterrupt:
 
 # Final cleanup - wait for threads to finish
 serial_thread.join(timeout=2.0)
-flask_thread.join(timeout=2.0)
+flask_poller_thread.join(timeout=2.0)
+# Flask server is daemon, will auto-terminate
 
 print("System stopped.")
 sys.exit()

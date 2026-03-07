@@ -110,28 +110,6 @@ def return_positions():
     print(motorPositions)
     return json.dumps(motorPositions)
 
-# @app.route("/return_positions")
-# def return_positions():
-#     with obs_act_lock:
-#         obs = latest_obs.copy()
-#     values = [
-#         obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
-#         obs['base'], obs['lower_hinge'], obs['upper_hinge'],
-#         obs['end_effector'], obs['gripper']
-#     ]
-#     return "&".join(str(round(v, 4)) for v in values)
-
-@app.route("/return_commands")
-def return_commands():
-    with obs_act_lock:
-        act = latest_act.copy()
-    values = [
-        act['upper_ring'], act['middle_ring'], act['lower_ring'],
-        act['base'], act['lower_hinge'], act['upper_hinge'],
-        act['end_effector'], act['gripper']
-    ]
-    return "&".join(str(round(v, 4)) for v in values)
-
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
     print(position)
