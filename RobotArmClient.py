@@ -529,28 +529,50 @@ def poll_flask():
                 #     print(f"Servo read error: {e}")
 
             if SPM_Waveshare:
-                
-                SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
 
-                UpperRing  = 5 * (float(motorPositions[0]) + 30)
-                MiddleRing = 5 * (float(motorPositions[1]) + 60)
-                LowerRing  = 5 * (float(motorPositions[2]))
+                # Define centers based on physical mounting positions
+                UPPER_RING_OFFSET  = 30.0
+                MIDDLE_RING_OFFSET = 60.0
+                LOWER_RING_OFFSET  = 0.0
+                RING_SCALE         = 5.0
+                RING_MAX_DEG       = 45.0  # your configured servo range
 
-                setOffset = int(motorPositions[7])
-                if setOffset == 2:
-                    posOffset += 20
-                elif setOffset == 1:
-                    posOffset -= 20
+                def compute_ring_cmd(raw_input, offset, inversion):
+                    cmd = RING_SCALE * (raw_input + offset)
+                    cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # clamp to safe range
+                    return cmd * inversion
 
-                cmd_upper_ring  = UpperRing  * SERVO_INVERSIONS[1]
-                cmd_middle_ring = MiddleRing * SERVO_INVERSIONS[2]
-                cmd_lower_ring  = LowerRing  * SERVO_INVERSIONS[3]
+                upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
+                middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
+                lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  -1)
 
                 controller.set_multiple_target_angles({
-                    1: cmd_upper_ring,
-                    2: cmd_middle_ring,
-                    3: cmd_lower_ring
+                    1: upper_cmd,
+                    2: middle_cmd,
+                    3: lower_cmd
                 })
+
+                # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
+                # UpperRing  = 5 * (float(motorPositions[0]) + 30)
+                # MiddleRing = 5 * (float(motorPositions[1]) + 60)
+                # LowerRing  = 5 * (float(motorPositions[2]))
+
+                # setOffset = int(motorPositions[7])
+                # if setOffset == 2:
+                #     posOffset += 20
+                # elif setOffset == 1:
+                #     posOffset -= 20
+
+                # cmd_upper_ring  = UpperRing  * SERVO_INVERSIONS[1]
+                # cmd_middle_ring = MiddleRing * SERVO_INVERSIONS[2]
+                # cmd_lower_ring  = LowerRing  * SERVO_INVERSIONS[3]
+
+                # controller.set_multiple_target_angles({
+                #     1: cmd_upper_ring,
+                #     2: cmd_middle_ring,
+                #     3: cmd_lower_ring
+                # })
 
                 # # Encoder readback (actual positions, converted back to degrees)
                 # cached = controller.get_cached_angles()  # ← degrees, accounts for gear ratio
@@ -570,11 +592,11 @@ def poll_flask():
                 # print(f"MiddleRing: raw={cached_raw.get(2)} | angle={cached_ang.get(2):.3f}")
                 # print(f"LowerRing:  raw={cached_raw.get(3)} | angle={cached_ang.get(3):.3f}")
 
-                raw_input = float(motorPositions[1])
-                MiddleRing = 5 * (raw_input + 60)
-                cmd_middle = MiddleRing * SERVO_INVERSIONS[2]
+                # raw_input = float(motorPositions[1])
+                # MiddleRing = 5 * (raw_input + 60)
+                # cmd_middle = MiddleRing * SERVO_INVERSIONS[2]
 
-                print(f"MiddleRing: raw_input={raw_input:+.3f} | cmd={cmd_middle:+.3f} | enc={controller.get_cached_angles().get(2):+.3f}")
+                # print(f"MiddleRing: raw_input={raw_input:+.3f} | cmd={cmd_middle:+.3f} | enc={controller.get_cached_angles().get(2):+.3f}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
