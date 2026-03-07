@@ -17,7 +17,7 @@ collect_data = True
 posOffset = 0.0  # Persistent state
 collect_position_data = ""
 goalPositionWrist = 0
-
+receive_position_data = ""
 
 def get_ip_addresses():
     system = platform.system().lower()
@@ -107,6 +107,12 @@ def motor_command():
 @app.route('/return_positions', methods=['GET','POST'])
 def return_positions():
     motorPositions = collect_position_data
+    print(motorPositions)
+    return json.dumps(motorPositions)
+
+@app.route('/receive_observations', methods=['GET','POST'])
+def return_positions():
+    motorPositions = receive_position_data
     print(motorPositions)
     return json.dumps(motorPositions)
 

@@ -34,27 +34,18 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-collect_data = True
-collect_position_data = ""
-
 # Flask routes
-@app.route('/return_positions', methods=['GET','POST'])
+@app.route("/return_positions")
 def return_positions():
-    motorPositions = collect_position_data
-    print(motorPositions)
-    return json.dumps(motorPositions)
-
-# @app.route("/return_positions")
-# def return_positions():
-#     """Return current observations (encoder positions)"""
-#     with obs_act_lock:
-#         obs = latest_obs.copy()
-#     values = [
-#         obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
-#         obs['base'], obs['lower_hinge'], obs['upper_hinge'],
-#         obs['end_effector'], obs['gripper']
-#     ]
-#     return "&".join(str(round(v, 4)) for v in values)
+    """Return current observations (encoder positions)"""
+    with obs_act_lock:
+        obs = latest_obs.copy()
+    values = [
+        obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
+        obs['base'], obs['lower_hinge'], obs['upper_hinge'],
+        obs['end_effector'], obs['gripper']
+    ]
+    return "&".join(str(round(v, 4)) for v in values)
 
 @app.route("/return_commands")
 def return_commands():
@@ -72,7 +63,7 @@ def return_commands():
 def run_flask():
     """Run Flask server in separate thread"""
     app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False, threaded=True)
-
+    
 ODrive = True  # Set to False if not using ODrive
 # Storm32 (only if SPM is True)
 SPM = False  # Set to False if not using Storm32
@@ -617,26 +608,79 @@ def poll_flask():
             #         #serial_Gripper.write(b'0')
             #         serial_Gripper.close()
 
-            # Atomically update shared state
-            with obs_act_lock:
-                latest_obs.update({
-                    'base': obs_base, 'lower_hinge': obs_lower,
-                    'upper_hinge': obs_upper, 'end_effector': obs_ee,
-                    'upper_ring': cached.get(1, 0.0),
-                    'middle_ring': cached.get(2, 0.0),
-                    'lower_ring':  cached.get(3, 0.0),
-                    'gripper': 0.0  # add your gripper source here
-                })
-                latest_act.update({
-                    'base': act_base, 'lower_hinge': act_lower,
-                    'upper_hinge': act_upper, 'end_effector': act_ee,
-                    'upper_ring': upper_cmd, 'middle_ring': middle_cmd,
-                    'lower_ring': lower_cmd,
-                    'gripper': 0.0  # add your gripper source here
-                })
+            # # Atomically update shared state
+            # with obs_act_lock:
+            #     latest_obs.update({
+            #         'base': obs_base, 'lower_hinge': obs_lower,
+            #         'upper_hinge': obs_upper, 'end_effector': obs_ee,
+            #         'upper_ring': cached.get(1, 0.0),
+            #         'middle_ring': cached.get(2, 0.0),
+            #         'lower_ring':  cached.get(3, 0.0),
+            #         'gripper': 0.0  # add your gripper source here
+            #     })
+            #     latest_act.update({
+            #         'base': act_base, 'lower_hinge': act_lower,
+            #         'upper_hinge': act_upper, 'end_effector': act_ee,
+            #         'upper_ring': upper_cmd, 'middle_ring': middle_cmd,
+            #         'lower_ring': lower_cmd,
+            #         'gripper': 0.0  # add your gripper source here
+            #     })
 
-        except requests.exceptions.Timeout:
-            pass # ignore timeouts
+             # Build observation payload
+            obs_data = {
+                'base': obs_base,
+                'lower_hinge': obs_lower,
+                'upper_hinge': obs_upper,
+                'end_effector': obs_ee,
+                'upper_ring': cached.get(1, 0.0),
+                'middle_ring': cached.get(2, 0.0),
+                'lower_ring': cached.get(3, 0.0),
+                'gripper': float(current_gripper_val)  # Actual gripper position
+            }
+            
+            # Build action payload
+            act_data = {
+                'base': act_base,
+                'lower_hinge': act_lower,
+                'upper_hinge': act_upper,
+                'end_effector': act_ee,
+                'upper_ring': upper_cmd,
+                'middle_ring': middle_cmd,
+                'lower_ring': lower_cmd,
+                'gripper': float(current_gripper_val)
+            }
+
+            # Update local cache (for your new endpoints if you keep them)
+            with obs_act_lock:
+                latest_obs.update(obs_data)
+                latest_act.update(act_data)
+
+            # Send observations to your existing Flask server
+            try:
+                # Format as your server expects: value1&value2&...
+                obs_values = [
+                    obs_data['upper_ring'],
+                    obs_data['middle_ring'],
+                    obs_data['lower_ring'],
+                    obs_data['base'],
+                    obs_data['lower_hinge'],
+                    obs_data['upper_hinge'],
+                    obs_data['end_effector'],
+                    obs_data['gripper']
+                ]
+                
+                obs_string = "&".join(str(round(v, 4)) for v in obs_values)
+                
+                # Send as GET parameter
+                requests.get(
+                    'http://127.0.0.1:5000/receive_observations',
+                    params={'data': obs_string},
+                    timeout=0.1
+                )
+
+            except requests.exceptions.Timeout:
+                pass # ignore timeouts
+            
         except Exception as e:
             print(f"Error: {e}")
 
@@ -650,60 +694,24 @@ def shutdown_motors():
     except Exception as e:
         print(f"Error during motor shutdown: {e}")
 
-# # Create and start threads
-# serial_thread = threading.Thread(target=read_serial, name="SerialReader")
-# flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
-
-# # Don't use daemon threads - we want controlled shutdown
-# serial_thread.start()
-# flask_thread.start()
-
-# try:
-#     # Wait for either thread to finish or event to be cleared
-#     while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
-#         time.sleep(0.1)
-    
-#     # If we get here due to overheat, wait a moment for both threads to finish cleanly
-#     if not running_event.is_set():
-#         print("Waiting for threads to finish...")
-#         serial_thread.join(timeout=1.0)
-#         flask_thread.join(timeout=1.0)
-        
-# except KeyboardInterrupt:
-#     print("\nUser interruption. Stopping...")
-#     running_event.clear()
-#     shutdown_motors()
-
-# # Final cleanup - wait for threads to finish
-# serial_thread.join(timeout=2.0)
-# flask_thread.join(timeout=2.0)
-
-# print("System stopped.")
-# sys.exit()
-
 # Create and start threads
-serial_thread = threading.Thread(target=read_serial, name="SerialReader", daemon=False)
-flask_poller_thread = threading.Thread(target=poll_flask, name="FlaskPoller", daemon=False)
-flask_server_thread = threading.Thread(target=run_flask, name="FlaskServer", daemon=True)
+serial_thread = threading.Thread(target=read_serial, name="SerialReader")
+flask_thread = threading.Thread(target=poll_flask, name="FlaskPoller")
 
-# Start all threads
-print("Starting Flask server on http://0.0.0.0:5001")
-flask_server_thread.start()
-time.sleep(0.5)  # Give Flask a moment to start
-
+# Don't use daemon threads - we want controlled shutdown
 serial_thread.start()
-flask_poller_thread.start()
+flask_thread.start()
 
 try:
     # Wait for either thread to finish or event to be cleared
-    while running_event.is_set() and (serial_thread.is_alive() or flask_poller_thread.is_alive()):
+    while running_event.is_set() and (serial_thread.is_alive() or flask_thread.is_alive()):
         time.sleep(0.1)
     
     # If we get here due to overheat, wait a moment for both threads to finish cleanly
     if not running_event.is_set():
         print("Waiting for threads to finish...")
         serial_thread.join(timeout=1.0)
-        flask_poller_thread.join(timeout=1.0)
+        flask_thread.join(timeout=1.0)
         
 except KeyboardInterrupt:
     print("\nUser interruption. Stopping...")
@@ -712,8 +720,7 @@ except KeyboardInterrupt:
 
 # Final cleanup - wait for threads to finish
 serial_thread.join(timeout=2.0)
-flask_poller_thread.join(timeout=2.0)
-# Flask server is daemon, will auto-terminate
+flask_thread.join(timeout=2.0)
 
 print("System stopped.")
 sys.exit()
