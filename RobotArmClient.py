@@ -34,6 +34,9 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+collect_data = True
+collect_position_data = ""
+
 # Flask routes
 @app.route('/return_positions', methods=['GET','POST'])
 def return_positions():
