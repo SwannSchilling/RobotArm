@@ -1,6 +1,6 @@
 # main.py
 from WaveshareServoController import WaveshareServoController
-
+import json
 # Method 1: Simple usage
 servo_ids = [1, 2, 3]
 
@@ -26,4 +26,6 @@ print(controller.read_all_angles())
 print(controller.read_all_positions())
 
 print(controller.read_servo_angle(1))
+
+print(json.dumps(controller.get_cached_positions()))
 

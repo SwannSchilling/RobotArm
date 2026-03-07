@@ -528,23 +528,25 @@ def poll_flask():
                     3: LowerRing * SERVO_INVERSIONS[3]      # Normal
                 })
                 
-                try:
-                    time.sleep(0.02)
-                    angles = {}
-                    for servo_id in [1, 2, 3]:
-                        try:
-                            angles[servo_id] = controller.read_angle(servo_id)
-                            time.sleep(0.005)  # small gap between each read
-                        except Exception as e:
-                            print(f"Servo {servo_id} read failed: {e}")
-                            angles[servo_id] = None
+                print(json.dumps(controller.get_cached_positions()))
+                
+                # try:
+                #     time.sleep(0.02)
+                #     angles = {}
+                #     for servo_id in [1, 2, 3]:
+                #         try:
+                #             angles[servo_id] = controller.read_angle(servo_id)
+                #             time.sleep(0.005)  # small gap between each read
+                #         except Exception as e:
+                #             print(f"Servo {servo_id} read failed: {e}")
+                #             angles[servo_id] = None
 
-                    if all(angles[i] is not None for i in [1, 2, 3]):
-                        print(f"Servo1 | cmd={UpperRing:.2f}° | actual={angles[1]:.2f}°")
-                        print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={angles[2]:.2f}°")
-                        print(f"Servo3 | cmd={LowerRing:.2f}° | actual={angles[3]:.2f}°")
-                except Exception as e:
-                    print(f"Servo read error: {e}")
+                #     if all(angles[i] is not None for i in [1, 2, 3]):
+                #         print(f"Servo1 | cmd={UpperRing:.2f}° | actual={angles[1]:.2f}°")
+                #         print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={angles[2]:.2f}°")
+                #         print(f"Servo3 | cmd={LowerRing:.2f}° | actual={angles[3]:.2f}°")
+                # except Exception as e:
+                #     print(f"Servo read error: {e}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
