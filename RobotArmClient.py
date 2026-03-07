@@ -569,7 +569,13 @@ def poll_flask():
                 print(f"UpperRing:  raw={cached_raw.get(1)} | angle={cached_ang.get(1):.3f}")
                 print(f"MiddleRing: raw={cached_raw.get(2)} | angle={cached_ang.get(2):.3f}")
                 print(f"LowerRing:  raw={cached_raw.get(3)} | angle={cached_ang.get(3):.3f}")
-                
+
+                raw_input = float(motorPositions[1])
+                MiddleRing = 5 * (raw_input + 60)
+                cmd_middle = MiddleRing * SERVO_INVERSIONS[2]
+
+                print(f"MiddleRing: raw_input={raw_input:+.3f} | cmd={cmd_middle:+.3f} | enc={controller.get_cached_angles().get(2):+.3f}")
+
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
             GRIPPER_OPEN = 180
