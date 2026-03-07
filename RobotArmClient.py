@@ -552,23 +552,23 @@ def poll_flask():
                     3: cmd_lower_ring
                 })
 
-                # Encoder readback (actual positions, converted back to degrees)
-                cached = controller.get_cached_angles()  # ← degrees, accounts for gear ratio
-                enc_upper_ring  = cached.get(1)
-                enc_middle_ring = cached.get(2)
-                enc_lower_ring  = cached.get(3)
+                # # Encoder readback (actual positions, converted back to degrees)
+                # cached = controller.get_cached_angles()  # ← degrees, accounts for gear ratio
+                # enc_upper_ring  = cached.get(1)
+                # enc_middle_ring = cached.get(2)
+                # enc_lower_ring  = cached.get(3)
 
-                print(f"UpperRing:   cmd={cmd_upper_ring:+.3f} | enc={enc_upper_ring:+.3f} | diff={cmd_upper_ring  - enc_upper_ring:+.3f}")
-                print(f"MiddleRing:  cmd={cmd_middle_ring:+.3f} | enc={enc_middle_ring:+.3f} | diff={cmd_middle_ring - enc_middle_ring:+.3f}")
-                print(f"LowerRing:   cmd={cmd_lower_ring:+.3f} | enc={enc_lower_ring:+.3f} | diff={cmd_lower_ring  - enc_lower_ring:+.3f}")
+                # print(f"UpperRing:   cmd={cmd_upper_ring:+.3f} | enc={enc_upper_ring:+.3f} | diff={cmd_upper_ring  - enc_upper_ring:+.3f}")
+                # print(f"MiddleRing:  cmd={cmd_middle_ring:+.3f} | enc={enc_middle_ring:+.3f} | diff={cmd_middle_ring - enc_middle_ring:+.3f}")
+                # print(f"LowerRing:   cmd={cmd_lower_ring:+.3f} | enc={enc_lower_ring:+.3f} | diff={cmd_lower_ring  - enc_lower_ring:+.3f}")
 
-                # Add this to your debug print to see raw counts vs angles
-                cached_raw = controller.get_cached_positions()  # raw 0-4095 counts
-                cached_ang = controller.get_cached_angles()      # converted degrees
+                # # Add this to your debug print to see raw counts vs angles
+                # cached_raw = controller.get_cached_positions()  # raw 0-4095 counts
+                # cached_ang = controller.get_cached_angles()      # converted degrees
 
-                print(f"UpperRing:  raw={cached_raw.get(1)} | angle={cached_ang.get(1):.3f}")
-                print(f"MiddleRing: raw={cached_raw.get(2)} | angle={cached_ang.get(2):.3f}")
-                print(f"LowerRing:  raw={cached_raw.get(3)} | angle={cached_ang.get(3):.3f}")
+                # print(f"UpperRing:  raw={cached_raw.get(1)} | angle={cached_ang.get(1):.3f}")
+                # print(f"MiddleRing: raw={cached_raw.get(2)} | angle={cached_ang.get(2):.3f}")
+                # print(f"LowerRing:  raw={cached_raw.get(3)} | angle={cached_ang.get(3):.3f}")
 
                 raw_input = float(motorPositions[1])
                 MiddleRing = 5 * (raw_input + 60)
