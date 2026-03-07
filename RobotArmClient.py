@@ -16,6 +16,16 @@ import socket
 import numpy as np
 from WaveshareServoController import WaveshareServoController
 
+# Top of file — shared between control loop and Flask
+latest_obs = {
+    'base': 0.0, 'lower_hinge': 0.0, 'upper_hinge': 0.0, 'end_effector': 0.0,
+    'upper_ring': 0.0, 'middle_ring': 0.0, 'lower_ring': 0.0, 'gripper': 0.0
+}
+latest_act = {
+    'base': 0.0, 'lower_hinge': 0.0, 'upper_hinge': 0.0, 'end_effector': 0.0,
+    'upper_ring': 0.0, 'middle_ring': 0.0, 'lower_ring': 0.0, 'gripper': 0.0
+}
+obs_act_lock = threading.Lock()
 
 # logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -269,21 +279,6 @@ if ODrive == True:
     while odrv1.axis1.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
 
-    # print("starting calibration...")
-    # odrv0.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    # odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    # odrv1.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-    # odrv1.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-
-    # while odrv0.axis0.current_state != AXIS_STATE_IDLE:
-    #     time.sleep(0.1)
-    # while odrv0.axis1.current_state != AXIS_STATE_IDLE:
-    #     time.sleep(0.1)
-    # while odrv1.axis0.current_state != AXIS_STATE_IDLE:
-    #     time.sleep(0.1)
-    # while odrv1.axis1.current_state != AXIS_STATE_IDLE:
-    #     time.sleep(0.1)
-
     errors_odrv0 = odrive.utils.dump_errors(odrv0, True)
     errors_odrv1 = odrive.utils.dump_errors(odrv1, True)
     odrv0.clear_errors() 
@@ -343,6 +338,19 @@ def poll_flask():
     global current_gripper_val
     global gripper_closed
     global gripper_open 
+    SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+    # Define centers based on physical mounting positions
+    UPPER_RING_OFFSET  = 30.0
+    MIDDLE_RING_OFFSET = 60.0
+    LOWER_RING_OFFSET  = 0.0
+    RING_SCALE         = 5.0
+    RING_MAX_DEG       = 45.0  # your configured servo range
+
+    def compute_ring_cmd(raw_input, offset, inversion):
+        cmd = RING_SCALE * (raw_input + offset)
+        cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # clamp to safe range
+        return cmd * inversion
+    
     motorPositions = [0.0] * 8  # initialized once per thread run
     print(f"Initialized motorPositions with length: {len(motorPositions)}")
     current_time = time.time()
@@ -480,68 +488,7 @@ def poll_flask():
                 odrive_states['axis3'] = odrv0.axis1.current_state
                 odrive_states['axis2'] = odrv0.axis0.current_state
 
-
-            # if SPM_Waveshare:
-            #     UpperRing = 5*(float(motorPositions[0])+30)
-            #     MiddleRing = 5*(float(motorPositions[1])+60)
-            #     LowerRing = 5*(float(motorPositions[2]))
-
-            #     # print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
-            #     # --------------------------------------------------------------------
-            #     # Seperate Offset to use on the wrist rotation
-            #     # --------------------------------------------------------------------
-            #     setOffset = (int(motorPositions[7]))
-                
-            #     if setOffset == 2:
-            #         posOffset += 20
-            #     elif setOffset == 1:
-            #         posOffset -= 20
-            #     # --------------------------------------------------------------------
-            #     # Servo controller setup working
-            #     # --------------------------------------------------------------------
-            #     # Move SERVO_INVERSIONS out of the loop?
-            #     SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
-
-            #     controller.set_multiple_target_angles({
-            #         1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
-            #         2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
-            #         3: LowerRing * SERVO_INVERSIONS[3]      # Normal
-            #     })
-                
-            #     print(json.dumps(controller.get_cached_positions()))
-
-                # try:
-                #     time.sleep(0.02)
-                #     angles = {}
-                #     for servo_id in [1, 2, 3]:
-                #         try:
-                #             angles[servo_id] = controller.read_angle(servo_id)
-                #             time.sleep(0.005)  # small gap between each read
-                #         except Exception as e:
-                #             print(f"Servo {servo_id} read failed: {e}")
-                #             angles[servo_id] = None
-
-                #     if all(angles[i] is not None for i in [1, 2, 3]):
-                #         print(f"Servo1 | cmd={UpperRing:.2f}° | actual={angles[1]:.2f}°")
-                #         print(f"Servo2 | cmd={MiddleRing:.2f}° | actual={angles[2]:.2f}°")
-                #         print(f"Servo3 | cmd={LowerRing:.2f}° | actual={angles[3]:.2f}°")
-                # except Exception as e:
-                #     print(f"Servo read error: {e}")
-
             if SPM_Waveshare:
-
-                # Define centers based on physical mounting positions
-                UPPER_RING_OFFSET  = 30.0
-                MIDDLE_RING_OFFSET = 60.0
-                LOWER_RING_OFFSET  = 0.0
-                RING_SCALE         = 5.0
-                RING_MAX_DEG       = 45.0  # your configured servo range
-
-                def compute_ring_cmd(raw_input, offset, inversion):
-                    cmd = RING_SCALE * (raw_input + offset)
-                    cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # clamp to safe range
-                    return cmd * inversion
-
                 upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
                 middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
                 lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  -1)
@@ -551,52 +498,6 @@ def poll_flask():
                     2: middle_cmd,
                     3: lower_cmd
                 })
-
-                # SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
-
-                # UpperRing  = 5 * (float(motorPositions[0]) + 30)
-                # MiddleRing = 5 * (float(motorPositions[1]) + 60)
-                # LowerRing  = 5 * (float(motorPositions[2]))
-
-                # setOffset = int(motorPositions[7])
-                # if setOffset == 2:
-                #     posOffset += 20
-                # elif setOffset == 1:
-                #     posOffset -= 20
-
-                # cmd_upper_ring  = UpperRing  * SERVO_INVERSIONS[1]
-                # cmd_middle_ring = MiddleRing * SERVO_INVERSIONS[2]
-                # cmd_lower_ring  = LowerRing  * SERVO_INVERSIONS[3]
-
-                # controller.set_multiple_target_angles({
-                #     1: cmd_upper_ring,
-                #     2: cmd_middle_ring,
-                #     3: cmd_lower_ring
-                # })
-
-                # # Encoder readback (actual positions, converted back to degrees)
-                # cached = controller.get_cached_angles()  # ← degrees, accounts for gear ratio
-                # enc_upper_ring  = cached.get(1)
-                # enc_middle_ring = cached.get(2)
-                # enc_lower_ring  = cached.get(3)
-
-                # print(f"UpperRing:   cmd={cmd_upper_ring:+.3f} | enc={enc_upper_ring:+.3f} | diff={cmd_upper_ring  - enc_upper_ring:+.3f}")
-                # print(f"MiddleRing:  cmd={cmd_middle_ring:+.3f} | enc={enc_middle_ring:+.3f} | diff={cmd_middle_ring - enc_middle_ring:+.3f}")
-                # print(f"LowerRing:   cmd={cmd_lower_ring:+.3f} | enc={enc_lower_ring:+.3f} | diff={cmd_lower_ring  - enc_lower_ring:+.3f}")
-
-                # # Add this to your debug print to see raw counts vs angles
-                # cached_raw = controller.get_cached_positions()  # raw 0-4095 counts
-                # cached_ang = controller.get_cached_angles()      # converted degrees
-
-                # print(f"UpperRing:  raw={cached_raw.get(1)} | angle={cached_ang.get(1):.3f}")
-                # print(f"MiddleRing: raw={cached_raw.get(2)} | angle={cached_ang.get(2):.3f}")
-                # print(f"LowerRing:  raw={cached_raw.get(3)} | angle={cached_ang.get(3):.3f}")
-
-                # raw_input = float(motorPositions[1])
-                # MiddleRing = 5 * (raw_input + 60)
-                # cmd_middle = MiddleRing * SERVO_INVERSIONS[2]
-
-                # print(f"MiddleRing: raw_input={raw_input:+.3f} | cmd={cmd_middle:+.3f} | enc={controller.get_cached_angles().get(2):+.3f}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
@@ -658,7 +559,45 @@ def poll_flask():
             #     elif Gripper_State == 0:
             #         #serial_Gripper.write(b'0')
             #         serial_Gripper.close()
-        
+
+            # ODrive observations (encoder)
+            obs_base  = -(odrv1.axis1.encoder.pos_estimate / 50) * 360
+            obs_lower = -(odrv1.axis0.encoder.pos_estimate / 50) * 360
+            obs_upper =  (odrv0.axis1.encoder.pos_estimate / 40) * 360
+            obs_ee    =  (odrv0.axis0.encoder.pos_estimate / 40) * 360
+
+            # ODrive actions (setpoint)
+            act_base  = -(odrv1.axis1.controller.pos_setpoint / 50) * 360
+            act_lower = -(odrv1.axis0.controller.pos_setpoint / 50) * 360
+            act_upper =  (odrv0.axis1.controller.pos_setpoint / 40) * 360
+            act_ee    =  (odrv0.axis0.controller.pos_setpoint / 40) * 360
+
+            # Ring servos
+            cached = controller.get_cached_angles()
+            upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
+            middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
+            lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
+
+            controller.set_multiple_target_angles({1: upper_cmd, 2: middle_cmd, 3: lower_cmd})
+
+            # Atomically update shared state
+            with obs_act_lock:
+                latest_obs.update({
+                    'base': obs_base, 'lower_hinge': obs_lower,
+                    'upper_hinge': obs_upper, 'end_effector': obs_ee,
+                    'upper_ring': cached.get(1, 0.0),
+                    'middle_ring': cached.get(2, 0.0),
+                    'lower_ring':  cached.get(3, 0.0),
+                    'gripper': 0.0  # add your gripper source here
+                })
+                latest_act.update({
+                    'base': act_base, 'lower_hinge': act_lower,
+                    'upper_hinge': act_upper, 'end_effector': act_ee,
+                    'upper_ring': upper_cmd, 'middle_ring': middle_cmd,
+                    'lower_ring': lower_cmd,
+                    'gripper': 0.0  # add your gripper source here
+                })
+
         except requests.exceptions.Timeout:
             pass # ignore timeouts
         except Exception as e:
