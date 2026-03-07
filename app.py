@@ -111,7 +111,7 @@ def return_positions():
     return json.dumps(motorPositions)
 
 @app.route('/receive_observations', methods=['GET','POST'])
-def return_positions():
+def receive_observations():
     motorPositions = receive_position_data
     print(motorPositions)
     return json.dumps(motorPositions)
