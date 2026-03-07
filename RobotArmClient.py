@@ -434,54 +434,93 @@ def poll_flask():
                     #     odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
                     # odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
 
-                    encoderTurns = [
-                        odrv0.axis0.encoder.pos_estimate,  # EndEffector (axis2)
-                        odrv0.axis1.encoder.pos_estimate,  # UpperHinge  (axis3)
-                        odrv1.axis0.encoder.pos_estimate,  # LowerHinge  (axis0)
-                        odrv1.axis1.encoder.pos_estimate   # Base        (axis1)
-                    ]
+                    # encoderBase_Rotation_deg     = -(odrv1.axis1.encoder.pos_estimate / 50) * 360  # undo gear + invert
+                    # encoderLowerHinge_Rotation_deg = -(odrv1.axis0.encoder.pos_estimate / 50) * 360  # same ratio, inverted
+                    # encoderUpperHinge_Rotation_deg =  (odrv0.axis1.encoder.pos_estimate / 40) * 360  # not inverted
+                    # encoderEndEffector_Rotation_deg = (odrv0.axis0.encoder.pos_estimate / 40) * 360  # not inverted
 
-                    encoderPositions = [t * 360 for t in encoderTurns]
-
-                    encoderEndEffector_Rotation = encoderPositions[0]
-                    encoderUpperHinge_Rotation  = encoderPositions[1]
-                    encoderLowerHinge_Rotation  = encoderPositions[2]
-                    encoderBase_Rotation        = encoderPositions[3]
-
-                    # Axis 1 (odrv1.axis1)
-                    cmd_base = new_positions[0] + axis_0
+                    # Set all motors to CLOSED_LOOP_CONTROL if they are currently in IDLE state
                     if previous_states['axis1'] == AXIS_STATE_IDLE:
                         odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv1.axis1.controller.input_pos = cmd_base
+                    odrv1.axis1.controller.input_pos = new_positions[0] + axis_0
 
-                    print(f"Base: cmd={cmd_base:.2f} deg | enc={encoderBase_Rotation:.2f} deg")
-
-
-                    # Axis 0 (odrv1.axis0)
-                    cmd_lower = new_positions[1] + axis_1
                     if previous_states['axis0'] == AXIS_STATE_IDLE:
                         odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv1.axis0.controller.input_pos = cmd_lower
+                    odrv1.axis0.controller.input_pos = new_positions[1] + axis_1
 
-                    print(f"LowerHinge: cmd={cmd_lower:.2f} deg | enc={encoderLowerHinge_Rotation:.2f} deg")
-
-
-                    # Axis 1 (odrv0.axis1)
-                    cmd_upper = new_positions[2] + axis_2
                     if previous_states['axis3'] == AXIS_STATE_IDLE:
                         odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv0.axis1.controller.input_pos = cmd_upper
+                    odrv0.axis1.controller.input_pos = new_positions[2] + axis_2
 
-                    print(f"UpperHinge: cmd={cmd_upper:.2f} deg | enc={encoderUpperHinge_Rotation:.2f} deg")
-
-
-                    # Axis 0 (odrv0.axis0)
-                    cmd_ee = new_positions[3] + axis_3
                     if previous_states['axis2'] == AXIS_STATE_IDLE:
                         odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-                    odrv0.axis0.controller.input_pos = cmd_ee
+                    odrv0.axis0.controller.input_pos = new_positions[3] + axis_3
 
-                    print(f"EndEffector: cmd={cmd_ee:.2f} deg | enc={encoderEndEffector_Rotation:.2f} deg")
+                    # Reverse-normalized encoder readings (same unit space as motorPositions)
+                    encoderBase_deg        = -(odrv1.axis1.encoder.pos_estimate / 50) * 360
+                    encoderLowerHinge_deg  = -(odrv1.axis0.encoder.pos_estimate / 50) * 360
+                    encoderUpperHinge_deg  =  (odrv0.axis1.encoder.pos_estimate / 40) * 360
+                    encoderEndEffector_deg =  (odrv0.axis0.encoder.pos_estimate / 40) * 360
+
+                    # Commands (what we just sent)
+                    cmd_base  = new_positions[0] + axis_0
+                    cmd_lower = new_positions[1] + axis_1
+                    cmd_upper = new_positions[2] + axis_2
+                    cmd_ee    = new_positions[3] + axis_3
+
+                    print(f"Base:        cmd={cmd_base:+.3f} | enc={encoderBase_deg:+.3f} | diff={cmd_base - encoderBase_deg:+.3f}")
+                    print(f"LowerHinge:  cmd={cmd_lower:+.3f} | enc={encoderLowerHinge_deg:+.3f} | diff={cmd_lower - encoderLowerHinge_deg:+.3f}")
+                    print(f"UpperHinge:  cmd={cmd_upper:+.3f} | enc={encoderUpperHinge_deg:+.3f} | diff={cmd_upper - encoderUpperHinge_deg:+.3f}")
+                    print(f"EndEffector: cmd={cmd_ee:+.3f} | enc={encoderEndEffector_deg:+.3f} | diff={cmd_ee - encoderEndEffector_deg:+.3f}")
+                    
+                    # encoderTurns = [
+                    #     odrv0.axis0.encoder.pos_estimate,  # EndEffector (axis2)
+                    #     odrv0.axis1.encoder.pos_estimate,  # UpperHinge  (axis3)
+                    #     odrv1.axis0.encoder.pos_estimate,  # LowerHinge  (axis0)
+                    #     odrv1.axis1.encoder.pos_estimate   # Base        (axis1)
+                    # ]
+
+                    # encoderPositions = [t * 360 for t in encoderTurns]
+
+                    # encoderEndEffector_Rotation = encoderPositions[0]
+                    # encoderUpperHinge_Rotation  = encoderPositions[1]
+                    # encoderLowerHinge_Rotation  = encoderPositions[2]
+                    # encoderBase_Rotation        = encoderPositions[3]
+
+                    # # Axis 1 (odrv1.axis1)
+                    # cmd_base = new_positions[0] + axis_0
+                    # if previous_states['axis1'] == AXIS_STATE_IDLE:
+                    #     odrv1.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                    # odrv1.axis1.controller.input_pos = cmd_base
+
+                    # print(f"Base: cmd={cmd_base:.2f} deg | enc={encoderBase_Rotation:.2f} deg")
+
+
+                    # # Axis 0 (odrv1.axis0)
+                    # cmd_lower = new_positions[1] + axis_1
+                    # if previous_states['axis0'] == AXIS_STATE_IDLE:
+                    #     odrv1.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                    # odrv1.axis0.controller.input_pos = cmd_lower
+
+                    # print(f"LowerHinge: cmd={cmd_lower:.2f} deg | enc={encoderLowerHinge_Rotation:.2f} deg")
+
+
+                    # # Axis 1 (odrv0.axis1)
+                    # cmd_upper = new_positions[2] + axis_2
+                    # if previous_states['axis3'] == AXIS_STATE_IDLE:
+                    #     odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                    # odrv0.axis1.controller.input_pos = cmd_upper
+
+                    # print(f"UpperHinge: cmd={cmd_upper:.2f} deg | enc={encoderUpperHinge_Rotation:.2f} deg")
+
+
+                    # # Axis 0 (odrv0.axis0)
+                    # cmd_ee = new_positions[3] + axis_3
+                    # if previous_states['axis2'] == AXIS_STATE_IDLE:
+                    #     odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+                    # odrv0.axis0.controller.input_pos = cmd_ee
+
+                    # print(f"EndEffector: cmd={cmd_ee:.2f} deg | enc={encoderEndEffector_Rotation:.2f} deg")
 
 
                 elif current_time - last_position_change_time > idle_timeout:
@@ -502,34 +541,35 @@ def poll_flask():
                 odrive_states['axis2'] = odrv0.axis0.current_state
 
 
-            if SPM_Waveshare:
-                UpperRing = 5*(float(motorPositions[0])+30)
-                MiddleRing = 5*(float(motorPositions[1])+60)
-                LowerRing = 5*(float(motorPositions[2]))
+            # if SPM_Waveshare:
+            #     UpperRing = 5*(float(motorPositions[0])+30)
+            #     MiddleRing = 5*(float(motorPositions[1])+60)
+            #     LowerRing = 5*(float(motorPositions[2]))
 
-                # print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
-                # --------------------------------------------------------------------
-                # Seperate Offset to use on the wrist rotation
-                # --------------------------------------------------------------------
-                setOffset = (int(motorPositions[7]))
+            #     # print(f"UpperRing: {UpperRing}, MiddleRing: {MiddleRing}, LowerRing: {LowerRing}")
+            #     # --------------------------------------------------------------------
+            #     # Seperate Offset to use on the wrist rotation
+            #     # --------------------------------------------------------------------
+            #     setOffset = (int(motorPositions[7]))
                 
-                if setOffset == 2:
-                    posOffset += 20
-                elif setOffset == 1:
-                    posOffset -= 20
-                # --------------------------------------------------------------------
-                # Servo controller setup working
-                # --------------------------------------------------------------------
-                SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+            #     if setOffset == 2:
+            #         posOffset += 20
+            #     elif setOffset == 1:
+            #         posOffset -= 20
+            #     # --------------------------------------------------------------------
+            #     # Servo controller setup working
+            #     # --------------------------------------------------------------------
+            #     # Move SERVO_INVERSIONS out of the loop?
+            #     SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
 
-                controller.set_multiple_target_angles({
-                    1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
-                    2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
-                    3: LowerRing * SERVO_INVERSIONS[3]      # Normal
-                })
+            #     controller.set_multiple_target_angles({
+            #         1: UpperRing * SERVO_INVERSIONS[1],  # Inverted
+            #         2: MiddleRing * SERVO_INVERSIONS[2],     # Normal
+            #         3: LowerRing * SERVO_INVERSIONS[3]      # Normal
+            #     })
                 
-                print(json.dumps(controller.get_cached_positions()))
-                
+            #     print(json.dumps(controller.get_cached_positions()))
+
                 # try:
                 #     time.sleep(0.02)
                 #     angles = {}
@@ -547,6 +587,40 @@ def poll_flask():
                 #         print(f"Servo3 | cmd={LowerRing:.2f}° | actual={angles[3]:.2f}°")
                 # except Exception as e:
                 #     print(f"Servo read error: {e}")
+
+            if SPM_Waveshare:
+                
+                SERVO_INVERSIONS = {1: -1, 2: -1, 3: -1}  # Servo 1,2,3 inverted
+
+                UpperRing  = 5 * (float(motorPositions[0]) + 30)
+                MiddleRing = 5 * (float(motorPositions[1]) + 60)
+                LowerRing  = 5 * (float(motorPositions[2]))
+
+                setOffset = int(motorPositions[7])
+                if setOffset == 2:
+                    posOffset += 20
+                elif setOffset == 1:
+                    posOffset -= 20
+
+                cmd_upper_ring  = UpperRing  * SERVO_INVERSIONS[1]
+                cmd_middle_ring = MiddleRing * SERVO_INVERSIONS[2]
+                cmd_lower_ring  = LowerRing  * SERVO_INVERSIONS[3]
+
+                controller.set_multiple_target_angles({
+                    1: cmd_upper_ring,
+                    2: cmd_middle_ring,
+                    3: cmd_lower_ring
+                })
+
+                # Encoder readback (actual positions, converted back to degrees)
+                cached = controller.get_cached_angles()  # ← degrees, accounts for gear ratio
+                enc_upper_ring  = cached.get(1)
+                enc_middle_ring = cached.get(2)
+                enc_lower_ring  = cached.get(3)
+
+                print(f"UpperRing:   cmd={cmd_upper_ring:+.3f} | enc={enc_upper_ring:+.3f} | diff={cmd_upper_ring  - enc_upper_ring:+.3f}")
+                print(f"MiddleRing:  cmd={cmd_middle_ring:+.3f} | enc={enc_middle_ring:+.3f} | diff={cmd_middle_ring - enc_middle_ring:+.3f}")
+                print(f"LowerRing:   cmd={cmd_lower_ring:+.3f} | enc={enc_lower_ring:+.3f} | diff={cmd_lower_ring  - enc_lower_ring:+.3f}")
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
