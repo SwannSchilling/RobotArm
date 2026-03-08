@@ -632,7 +632,7 @@ def poll_flask():
                 'end_effector_norm': EndEffector_Rotation_norm,
                 'upper_ring_norm': compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
                 'middle_ring_norm': compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
-                'lower_ring_norm': lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
+                'lower_ring_norm': compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
                 'gripper': float(current_gripper_val)  # Actual gripper position
             }
 
