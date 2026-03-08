@@ -737,12 +737,17 @@ def poll_flask():
 
                 import urllib.parse
 
-                act_string = urllib.parse.quote("&".join(str(round(v,4)) for v in act_values))
-                obs_string = urllib.parse.quote("&".join(str(round(v,4)) for v in obs_values))
+                url = "http://127.0.0.1:5000/get_state"
 
-                url = f"http://127.0.0.1:5000/get_state/{act_string}/{obs_string}"
-                requests.get(url)
-                
+                payload = {
+                    "act": act_values,
+                    "obs": obs_values
+                }
+
+                response = requests.post(url, json=payload)
+
+                print(response.json())
+
                 # # Send as GET parameter
                 # requests.get(
                 #     'http://127.0.0.1:5000/get_state',

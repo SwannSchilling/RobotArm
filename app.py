@@ -89,19 +89,12 @@ def receive_observations():
         obs_values = [obs_copy[k] for k in OBS_ORDER]
         return "&".join(f"{v:.4f}" for v in obs_values)
 
-@app.route("/get_state/<act>/<obs>")
-def get_state(act, obs):
-
-    act_values = [float(v) for v in act.split("&")]
-    obs_values = [float(v) for v in obs.split("&")]
-
-    print(act_values)
-    print(obs_values)
-
-    return jsonify({
-        "act": act_values,
-        "obs": obs_values
-    })
+@app.route("/get_state", methods=["POST"])
+def get_state():
+    data = request.json
+    act = data["act"]
+    obs = data["obs"]
+    return {"act": act, "obs": obs}
 
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():

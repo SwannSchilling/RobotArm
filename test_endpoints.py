@@ -1,23 +1,5 @@
-import requests
-import time
 
-FLASK_URL = "http://192.168.2.122:5000/get_state"
 
-while True:
-    try:
-        resp = requests.post(FLASK_URL, json={}, timeout=0.5)
-        if resp.status_code == 200:
-            data = resp.json()
-            print(f"Commands: {data['commands']}")
-            print(f"Observations: {data['observations']}")
-            print("-" * 60)
-        else:
-            print(f"HTTP {resp.status_code}")
-    except Exception as e:
-        print(f"Error: {e}")
-    
-    time.sleep(0.1)
-    
 # import requests
 # import time
 
