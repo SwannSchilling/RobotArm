@@ -26,12 +26,17 @@ def fetch(url):
 def parse_obs_string(s):
     """Convert &-separated string to a dictionary with OBS_ORDER keys."""
     try:
+        # Remove quotes if present
+        s = s.strip().strip('"').strip("'")
+        # Split and normalize decimal commas
         values = [float(v.replace(',', '.')) for v in s.split('&')]
+        if len(values) != len(OBS_ORDER):
+            print(f"Warning: expected {len(OBS_ORDER)} values, got {len(values)}")
         return {k: v for k, v in zip(OBS_ORDER, values)}
     except Exception as e:
         print(f"Error parsing string '{s}': {e}")
+        # Return None for all joints if parsing fails
         return {k: None for k in OBS_ORDER}
-
 print("\nPolling endpoints...\n")
 
 for i in range(ITERATIONS):

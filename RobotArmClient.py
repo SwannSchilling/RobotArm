@@ -624,53 +624,57 @@ def poll_flask():
             #         'lower_ring': lower_cmd,
             #         'gripper': 0.0  # add your gripper source here
             #     })
-            FlaskPositions ={
-                'Base_Rotation' : motorPositions[3],
-                'LowerHinge_Rotation' : motorPositions[4],
-                'UpperHinge_Rotation' : motorPositions[5],
-                'EndEffector_Rotation' : motorPositions[6],
+            FlaskPositions = {
+                'upper_ring_deg'     : motorPositions[0],
+                'middle_ring_deg'    : motorPositions[1],
+                'lower_ring_deg'     : motorPositions[2],
 
+                'Base_Rotation'      : motorPositions[3],
+                'LowerHinge_Rotation': motorPositions[4],
+                'UpperHinge_Rotation': motorPositions[5],
+                'EndEffector_Rotation': motorPositions[6],
+
+                'gripper_servo'      : motorPositions[7]
+            }
+        
+            CommandedPositions = {
                 'upper_ring_deg': upper_cmd,
                 'middle_ring_deg': middle_cmd,
                 'lower_ring_deg': lower_cmd,
 
-                'gripper_servo': current_gripper_val
-            }
-
-            CommandedPositions = {
                 'base_turns': Base_Rotation_norm,
                 'lower_hinge_turns': LowerHinge_Rotation_norm,
                 'upper_hinge_turns': UpperHinge_Rotation_norm,
                 'end_effector_turns': EndEffector_Rotation_norm,
-
-                'upper_ring_deg': upper_cmd,
-                'middle_ring_deg': middle_cmd,
-                'lower_ring_deg': lower_cmd,
 
                 'gripper_servo': current_gripper_val
             }
             
              # Build observation payload
             obs_data = {
+                'upper_ring': cached.get(1, 0.0),
+                'middle_ring': cached.get(2, 0.0),
+                'lower_ring': cached.get(3, 0.0),
+
                 'base': obs_base,
                 'lower_hinge': obs_lower,
                 'upper_hinge': obs_upper,
                 'end_effector': obs_ee,
-                'upper_ring': cached.get(1, 0.0),
-                'middle_ring': cached.get(2, 0.0),
-                'lower_ring': cached.get(3, 0.0),
+    
                 'gripper': float(current_gripper_val)  # Actual gripper position
             }
             
             # Build action payload
             act_data = {
+                'upper_ring': upper_cmd,
+                'middle_ring': middle_cmd,
+                'lower_ring': lower_cmd,
+
                 'base': act_base,
                 'lower_hinge': act_lower,
                 'upper_hinge': act_upper,
                 'end_effector': act_ee,
-                'upper_ring': upper_cmd,
-                'middle_ring': middle_cmd,
-                'lower_ring': lower_cmd,
+                
                 'gripper': float(current_gripper_val)
             }
 
@@ -686,10 +690,12 @@ def poll_flask():
                     obs_data['upper_ring'],
                     obs_data['middle_ring'],
                     obs_data['lower_ring'],
+
                     obs_data['base'],
                     obs_data['lower_hinge'],
                     obs_data['upper_hinge'],
                     obs_data['end_effector'],
+
                     obs_data['gripper']
                 ]
                 
