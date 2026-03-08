@@ -670,7 +670,13 @@ def poll_flask():
                 ]
                 
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
+                print('----------------------------------------------------------------------')
+                print('Act Data')
+                print(act_data)
+                print('Obs Data')
                 print(obs_string)
+                print('----------------------------------------------------------------------')
+
                 # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/receive_observations',
