@@ -90,21 +90,23 @@ def receive_observations():
         return "&".join(f"{v:.4f}" for v in obs_values)
 
 @app.route("/get_state")
-def get_state():
+def get_state(state):
+    print(state)
+    return jsonify(state)
 
-    act_encoded = request.args.get("act", "")
-    obs_encoded = request.args.get("obs", "")
+    # act_encoded = request.args.get("act", "")
+    # obs_encoded = request.args.get("obs", "")
 
-    act_decoded = urllib.parse.unquote(act_encoded)
-    obs_decoded = urllib.parse.unquote(obs_encoded)
+    # act_decoded = urllib.parse.unquote(act_encoded)
+    # obs_decoded = urllib.parse.unquote(obs_encoded)
 
-    act_values = [float(v.replace(",", ".")) for v in act_decoded.split("&") if v]
-    obs_values = [float(v.replace(",", ".")) for v in obs_decoded.split("&") if v]
+    # act_values = [float(v.replace(",", ".")) for v in act_decoded.split("&") if v]
+    # obs_values = [float(v.replace(",", ".")) for v in obs_decoded.split("&") if v]
 
-    print("act:", act_values)
-    print("obs:", obs_values)
+    # print("act:", act_values)
+    # print("obs:", obs_values)
 
-    return jsonify({"act": act_values, "obs": obs_values})
+    # return jsonify({"act": act_values, "obs": obs_values})
 
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():
