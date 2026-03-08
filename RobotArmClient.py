@@ -737,13 +737,10 @@ def poll_flask():
 
                 url = "http://127.0.0.1:5000/get_state"
 
-                # Send the data to the server
-                response = requests.post(url, json={"act": act_values, "obs": obs_values})
+                act_values_rounded = [round(v,4) for v in act_values]
+                obs_values_rounded = [round(v,4) for v in obs_values]
 
-                # Read back the server's response
-                data = response.json()
-                print("Server received Act:", data["act"])
-                print("Server received Obs:", data["obs"])
+                response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
 
                 # # Send as GET parameter
                 # requests.get(
