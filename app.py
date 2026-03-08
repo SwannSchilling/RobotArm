@@ -13,17 +13,6 @@ app = Flask(__name__)
 from flask import Flask, request
 from threading import Lock
 
-latest_observations = {
-    'upper_ring': 0.0,
-    'middle_ring': 0.0,
-    'lower_ring': 0.0,
-    'base': 0.0,
-    'lower_hinge': 0.0,
-    'upper_hinge': 0.0,
-    'end_effector': 0.0,
-    'gripper': 0.0
-}
-
 obs_lock = threading.Lock()
 
 collect_data = True
@@ -97,7 +86,17 @@ def receive_observations():
         # Return as a predictable string
         obs_values = [obs_copy[k] for k in OBS_ORDER]
         return "&".join(f"{v:.4f}" for v in obs_values)
-    
+
+@app.route("/get_state")
+def get_state():
+    obs = request.args.get("data")
+
+    if obs:
+        values = [float(x) for x in obs.split("&")]
+        print(values)
+
+    return json.dumps(values)
+   
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():
     """Endpoint for web interface to set poses"""
@@ -165,66 +164,6 @@ def return_positions():
     motorPositions = collect_position_data
     print(motorPositions)
     return json.dumps(motorPositions)
-
-# @app.route('/receive_observations', methods=['GET','POST'])
-# def receive_observations():
-#     motorPositions = receive_position_data
-#     print(motorPositions)
-#     return json.dumps(motorPositions)
-
-# @app.route("/receive_observations")
-# def receive_observations():
-#     """Robot sends observations here"""
-#     global latest_observations
-    
-#     data_string = request.args.get('data', '')
-    
-#     if data_string:
-#         # Receiving data FROM robot
-#         try:
-#             values = [float(v) for v in data_string.split('&')]
-#             if len(values) == 8:
-#                 with obs_lock:
-#                     latest_observations = {
-#                         'upper_ring': values[0],
-#                         'middle_ring': values[1],
-#                         'lower_ring': values[2],
-#                         'base': values[3],
-#                         'lower_hinge': values[4],
-#                         'upper_hinge': values[5],
-#                         'end_effector': values[6],
-#                         'gripper': values[7]
-#                     }
-#                 return "OK", 200
-#         except Exception as e:
-#             return f"Error: {e}", 400
-#     else:
-#         # Querying stored observations
-#         with obs_lock:
-#             obs = latest_observations.copy()
-#         values = [
-#             obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
-#             obs['base'], obs['lower_hinge'], obs['upper_hinge'],
-#             obs['end_effector'], obs['gripper']
-#         ]
-#         return "&".join(str(round(v, 4)) for v in values)
-
-# @app.route('/get_state')
-# def get_state():
-#     """Return actual robot state - source of truth for inference"""
-#     global latest_encoder_state
-#     # Return copy to avoid race conditions
-#     return "&".join([f"{x:.4f}".replace('.', ',') for x in latest_encoder_state[:]])
-
-@app.route("/get_state")
-def get_state():
-    obs = request.args.get("data")
-
-    if obs:
-        values = [float(x) for x in obs.split("&")]
-        print(values)
-
-    return "ok"
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):

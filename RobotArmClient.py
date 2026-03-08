@@ -664,7 +664,7 @@ def poll_flask():
                 'lower_hinge': obs_lower,  
                 'upper_hinge': obs_upper,  
                 'end_effector': obs_ee,   
-                'gripper': float(current_gripper_val)
+                'gripper_servo': motorPositions[7] # Gripper needs to be worked on
             }
                         
             # Build action payload
@@ -717,13 +717,6 @@ def poll_flask():
                 print('----------------------------------------------------------------------')
 
                 # Send as GET parameter
-                requests.get(
-                    'http://127.0.0.1:5000/get_state',
-                    params={'data': obs_string},
-                    timeout=0.1
-                )
-
-                    # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/receive_observations',
                     params={'data': obs_string},
