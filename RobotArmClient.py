@@ -629,6 +629,19 @@ def poll_flask():
             #         'gripper': 0.0  # add your gripper source here
             #     })
             
+            CommandedPositions = {
+                'upper_ring_deg': upper_cmd,
+                'middle_ring_deg': middle_cmd,
+                'lower_ring_deg': lower_cmd,
+
+                'base_turns': Base_Rotation_norm,
+                'lower_hinge_turns': LowerHinge_Rotation_norm,
+                'upper_hinge_turns': UpperHinge_Rotation_norm,
+                'end_effector_turns': EndEffector_Rotation_norm,
+
+                'gripper_servo': current_gripper_val
+            }
+
             FlaskPositions = {
                 'upper_ring_deg'     : motorPositions[0],
                 'middle_ring_deg'    : motorPositions[1],
@@ -642,29 +655,18 @@ def poll_flask():
                 'gripper_servo'      : motorPositions[7]
             }
         
-            CommandedPositions = {
-                'upper_ring_deg': upper_cmd,
-                'middle_ring_deg': middle_cmd,
-                'lower_ring_deg': lower_cmd,
-
-                'base_turns': Base_Rotation_norm,
-                'lower_hinge_turns': LowerHinge_Rotation_norm,
-                'upper_hinge_turns': UpperHinge_Rotation_norm,
-                'end_effector_turns': EndEffector_Rotation_norm,
-
-                'gripper_servo': current_gripper_val
-            }
             
              # Build observation payload
             obs_data = {
                 'upper_ring': recover_raw_input(cached[1], UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
                 'middle_ring': recover_raw_input(cached[2], MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
                 'lower_ring': recover_raw_input(cached[3], LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
+                
                 'base': obs_base,         
                 'lower_hinge': obs_lower,  
                 'upper_hinge': obs_upper,  
                 'end_effector': obs_ee,   
-                'gripper': float(current_gripper_val)
+                'gripper': motorPositions[7]
             }
                         
             # Build action payload
