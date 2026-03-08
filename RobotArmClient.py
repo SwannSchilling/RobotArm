@@ -651,18 +651,18 @@ def poll_flask():
             }
             
              # Build observation payload
-           obs_data = {
-                'upper_ring': compute_ring_cmd(cached.get(1, 0.0), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
-                'middle_ring': compute_ring_cmd(cached.get(2, 0.0), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
-                'lower_ring': compute_ring_cmd(cached.get(3, 0.0), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
+            obs_data = {
+                    'upper_ring': compute_ring_cmd(cached.get(1, 0.0), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
+                    'middle_ring': compute_ring_cmd(cached.get(2, 0.0), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
+                    'lower_ring': compute_ring_cmd(cached.get(3, 0.0), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
 
-                'base': obs_base,
-                'lower_hinge': obs_lower,
-                'upper_hinge': obs_upper,
-                'end_effector': obs_ee,
-                
-                'gripper': float(current_gripper_val)
-            }
+                    'base': obs_base,
+                    'lower_hinge': obs_lower,
+                    'upper_hinge': obs_upper,
+                    'end_effector': obs_ee,
+                    
+                    'gripper': float(current_gripper_val)
+                }
             
             # Build action payload
             act_data = {
