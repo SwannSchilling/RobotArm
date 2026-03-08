@@ -89,16 +89,21 @@ def receive_observations():
         obs_values = [obs_copy[k] for k in OBS_ORDER]
         return "&".join(f"{v:.4f}" for v in obs_values)
 
-@app.route("/get_state", methods=["GET", "POST"])
-def get_state():
+# Store the latest robot data
+latest_robot_data = {}
 
-    if request.method == "POST":
-        data = request.get_json()
-        act = data["act"]
-        obs = data["obs"]
-        return jsonify({"act": act, "obs": obs})
+@app.route("/get_state", methods=["POST"])
+def receive_robot_data():
+    global latest_robot_data
+    data = request.get_json()  # Read what the robot sent
+    latest_robot_data = data
+    print("Server received:", latest_robot_data)
+    return jsonify({"status": "OK", "received": latest_robot_data})
 
-    return "Endpoint alive"
+@app.route("/get_state/latest", methods=["GET"])
+def send_to_friends():
+    # Friends can GET this endpoint to read the latest data
+    return jsonify(latest_robot_data)
 
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():

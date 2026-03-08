@@ -1,4 +1,13 @@
+import requests
+import time
 
+url = "http://127.0.0.1:5000/get_state/latest"
+
+for _ in range(5):  # Poll 5 times
+    response = requests.get(url)
+    data = response.json()
+    print("Friend sees:", data)
+    time.sleep(2)  # wait before next check
 
 # import requests
 # import time
