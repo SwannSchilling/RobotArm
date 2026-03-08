@@ -89,17 +89,18 @@ def receive_observations():
 
 @app.route("/get_state", methods=["POST"])
 def get_state():
-    data = request.get_json()
-    
-    # Debug prints on server side
-    print(f"🔥 FLASK RECEIVED:")
-    print(f"   commands: {data.get('commands')}")
-    print(f"   observations: {data.get('observations')}")
-    
-    return jsonify({
-        "commands": data["commands"],
-        "observations": data["observations"]
-    })
+    try:
+        data = request.get_json() or {}
+        
+        print(f"🔥 FLASK RECEIVED: {data}")
+        
+        return jsonify({
+            "commands": data.get("commands", []),
+            "observations": data.get("observations", [])
+        })
+    except Exception as e:
+        print(f"❌ FLASK ERROR: {e}")
+        return jsonify({"error": str(e)}), 500
    
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():

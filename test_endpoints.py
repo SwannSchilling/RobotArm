@@ -1,32 +1,22 @@
 import requests
 import time
 
-FLASK_URL = '192.168.2.122:5000/get_state'
-def poll_state():
+FLASK_URL = "http://192.168.2.122:5000/get_state"
+
+while True:
     try:
         resp = requests.post(FLASK_URL, json={}, timeout=0.5)
         if resp.status_code == 200:
-            return resp.json()
+            data = resp.json()
+            print(f"Commands: {data['commands']}")
+            print(f"Observations: {data['observations']}")
+            print("-" * 40)
         else:
-            print('error..')
-            return None
-    except Exception:
-        return None
-
-# Usage in your recorder loop
-while True:
-    t0 = time.time()
-    print('polling..')
-    data = poll_state()
-    if data:
-        commands = data.get("commands", [])
-        observations = data.get("observations", [])
-        # Use data here for your recording logic
-        print(f"Cmd: {len(commands)}, Obs: {len(observations)}")
-    else:
-        print('no data received..')
-    elapsed = time.time() - t0
-    time.sleep(max(0, 0.01 - elapsed))  # 100Hz
+            print(f"HTTP {resp.status_code}")
+    except Exception as e:
+        print(f"Error: {e}")
+    
+    time.sleep(0.01)
 
 # import requests
 # import time
