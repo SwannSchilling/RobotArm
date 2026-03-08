@@ -739,8 +739,16 @@ def poll_flask():
                     "commands": act_values,
                     "observations": obs_values
                 }, timeout=0.5)
+
+                # Debug prints
+                print(f"📤 SENT commands: {act_values}")
+                print(f"📤 SENT observations: {obs_values}")
+
                 data = resp.json()
-                
+
+                print(f"📥 RECV commands: {data['commands']}")
+                print(f"📥 RECV observations: {data['observations']}")
+
                 # # Send as GET parameter
                 # requests.get(
                 #     'http://127.0.0.1:5000/get_state',
