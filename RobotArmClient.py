@@ -483,23 +483,23 @@ def poll_flask():
                     act_upper       = odrv0.axis1.controller.pos_setpoint
                     act_ee          = odrv0.axis0.controller.pos_setpoint
 
-                    # Convert both to degrees in the same coordinate space
-                    def odrive_to_deg_base(turns):
-                        return -(turns / 50) * 360   # inverted, 50:1
+                    # # Convert both to degrees in the same coordinate space
+                    # def odrive_to_deg_base(turns):
+                    #     return -(turns / 50) * 360   # inverted, 50:1
 
-                    def odrive_to_deg_lower(turns):
-                        return -(turns / 50) * 360   # inverted, 50:1
+                    # def odrive_to_deg_lower(turns):
+                    #     return -(turns / 50) * 360   # inverted, 50:1
 
-                    def odrive_to_deg_upper(turns):
-                        return  (turns / 40) * 360   # not inverted, 40:1
+                    # def odrive_to_deg_upper(turns):
+                    #     return  (turns / 40) * 360   # not inverted, 40:1
 
-                    def odrive_to_deg_ee(turns):
-                        return  (turns / 40) * 360   # not inverted, 40:1
+                    # def odrive_to_deg_ee(turns):
+                    #     return  (turns / 40) * 360   # not inverted, 40:1
 
-                    print(f"Base:        obs={odrive_to_deg_base(obs_base):+.3f} | act={odrive_to_deg_base(act_base):+.3f} | err={odrive_to_deg_base(act_base - obs_base):+.3f}")
-                    print(f"LowerHinge:  obs={odrive_to_deg_lower(obs_lower):+.3f} | act={odrive_to_deg_lower(act_lower):+.3f} | err={odrive_to_deg_lower(act_lower - obs_lower):+.3f}")
-                    print(f"UpperHinge:  obs={odrive_to_deg_upper(obs_upper):+.3f} | act={odrive_to_deg_upper(act_upper):+.3f} | err={odrive_to_deg_upper(act_upper - obs_upper):+.3f}")
-                    print(f"EndEffector: obs={odrive_to_deg_ee(obs_ee):+.3f} | act={odrive_to_deg_ee(act_ee):+.3f} | err={odrive_to_deg_ee(act_ee - obs_ee):+.3f}")
+                    # print(f"Base:        obs={odrive_to_deg_base(obs_base):+.3f} | act={odrive_to_deg_base(act_base):+.3f} | err={odrive_to_deg_base(act_base - obs_base):+.3f}")
+                    # print(f"LowerHinge:  obs={odrive_to_deg_lower(obs_lower):+.3f} | act={odrive_to_deg_lower(act_lower):+.3f} | err={odrive_to_deg_lower(act_lower - obs_lower):+.3f}")
+                    # print(f"UpperHinge:  obs={odrive_to_deg_upper(obs_upper):+.3f} | act={odrive_to_deg_upper(act_upper):+.3f} | err={odrive_to_deg_upper(act_upper - obs_upper):+.3f}")
+                    # print(f"EndEffector: obs={odrive_to_deg_ee(obs_ee):+.3f} | act={odrive_to_deg_ee(act_ee):+.3f} | err={odrive_to_deg_ee(act_ee - obs_ee):+.3f}")
                     
                 elif current_time - last_position_change_time > idle_timeout:
                     if not idle_flag:
@@ -624,18 +624,32 @@ def poll_flask():
             #         'lower_ring': lower_cmd,
             #         'gripper': 0.0  # add your gripper source here
             #     })
+            FlaskPositions ={
+                'Base_Rotation' : motorPositions[3],
+                'LowerHinge_Rotation' : motorPositions[4],
+                'UpperHinge_Rotation' : motorPositions[5],
+                'EndEffector_Rotation' : motorPositions[6],
+                
+                'upper_ring_deg': upper_cmd,
+                'middle_ring_deg': middle_cmd,
+                'lower_ring_deg': lower_cmd,
 
-            NormalizedPositions = {
-                'base_norm': Base_Rotation_norm,
-                'lower_hinge_norm': LowerHinge_Rotation_norm,
-                'upper_hinge_norm': UpperHinge_Rotation_norm,
-                'end_effector_norm': EndEffector_Rotation_norm,
-                'upper_ring_norm': compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
-                'middle_ring_norm': compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
-                'lower_ring_norm': compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
-                'gripper': float(current_gripper_val)  # Actual gripper position
+                'gripper_servo': current_gripper_val
             }
 
+            CommandedPositions = {
+                'base_turns': Base_Rotation_norm,
+                'lower_hinge_turns': LowerHinge_Rotation_norm,
+                'upper_hinge_turns': UpperHinge_Rotation_norm,
+                'end_effector_turns': EndEffector_Rotation_norm,
+
+                'upper_ring_deg': upper_cmd,
+                'middle_ring_deg': middle_cmd,
+                'lower_ring_deg': lower_cmd,
+
+                'gripper_servo': current_gripper_val
+            }
+            
              # Build observation payload
             obs_data = {
                 'base': obs_base,
@@ -681,8 +695,10 @@ def poll_flask():
                 
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
                 print('----------------------------------------------------------------------')
-                print('Normalized positions')
-                print(NormalizedPositions)
+                print('Flask positions')
+                print(FlaskPositions)
+                print('Commanded positions')
+                print(CommandedPositions)
                 print('Act Data')
                 print(act_data)
                 print('Obs Data')

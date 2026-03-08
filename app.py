@@ -32,6 +32,7 @@ posOffset = 0.0  # Persistent state
 collect_position_data = ""
 goalPositionWrist = 0
 receive_position_data = ""
+latest_encoder_state = [0.0] * 8  # Updated ONLY by poll_flask thread
 
 def get_ip_addresses():
     system = platform.system().lower()
@@ -167,6 +168,12 @@ def receive_observations():
         ]
         return "&".join(str(round(v, 4)) for v in values)
 
+@app.route('/get_state')
+def get_state():
+    """Return actual robot state - source of truth for inference"""
+    global latest_encoder_state
+    # Return copy to avoid race conditions
+    return "&".join([f"{x:.4f}".replace('.', ',') for x in latest_encoder_state[:]])
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
