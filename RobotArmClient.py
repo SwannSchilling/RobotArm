@@ -652,18 +652,16 @@ def poll_flask():
             
              # Build observation payload
             obs_data = {
-                    'upper_ring': compute_ring_cmd(cached.get(1, 0.0), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
-                    'middle_ring': compute_ring_cmd(cached.get(2, 0.0), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
-                    'lower_ring': compute_ring_cmd(cached.get(3, 0.0), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
-
-                    'base': obs_base,
-                    'lower_hinge': obs_lower,
-                    'upper_hinge': obs_upper,
-                    'end_effector': obs_ee,
-                    
-                    'gripper': float(current_gripper_val)
-                }
-            
+                'upper_ring': compute_ring_cmd(cached.get(1, 0.0), UPPER_RING_OFFSET, SERVO_INVERSIONS[1]),
+                'middle_ring': compute_ring_cmd(cached.get(2, 0.0), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
+                'lower_ring': compute_ring_cmd(cached.get(3, 0.0), LOWER_RING_OFFSET, SERVO_INVERSIONS[3]),
+                'base': obs_base,          # no change needed
+                'lower_hinge': obs_lower,  # no change needed
+                'upper_hinge': obs_upper,  # no change needed
+                'end_effector': obs_ee,    # no change needed
+                'gripper': float(current_gripper_val)
+            }
+                        
             # Build action payload
             act_data = {
                 'upper_ring': upper_cmd,
@@ -703,8 +701,8 @@ def poll_flask():
                 print('----------------------------------------------------------------------')
                 print('Flask positions')
                 print(FlaskPositions)
-                print('Commanded positions')
-                print(CommandedPositions)
+                # print('Commanded positions')
+                # print(CommandedPositions)
                 print('Act Data')
                 print(act_data)
                 print('Obs Data')
