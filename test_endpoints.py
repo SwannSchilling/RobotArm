@@ -1,22 +1,19 @@
 import requests
-import time
 
 FLASK_URL = "http://192.168.2.122:5000/get_state"
 
-while True:
-    try:
-        resp = requests.post(FLASK_URL, json={}, timeout=0.5)
-        if resp.status_code == 200:
-            data = resp.json()
-            print(f"Commands: {data['commands']}")
-            print(f"Observations: {data['observations']}")
-            print("-" * 40)
-        else:
-            print(f"HTTP {resp.status_code}")
-    except Exception as e:
-        print(f"Error: {e}")
-    
-    time.sleep(0.01)
+# Test 1: Empty payload
+print("Test 1: Empty JSON")
+resp = requests.post(FLASK_URL, json={}, timeout=0.5)
+print(f"Status: {resp.status_code}, Response: {resp.json()}\n")
+
+# Test 2: With data
+print("Test 2: With data")
+resp = requests.post(FLASK_URL, json={
+    "commands": [1, 2, 3, 4, 5, 6, 7, 8],
+    "observations": [8, 7, 6, 5, 4, 3, 2, 1]
+}, timeout=0.5)
+print(f"Status: {resp.status_code}, Response: {resp.json()}")
 
 # import requests
 # import time
