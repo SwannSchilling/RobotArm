@@ -734,23 +734,15 @@ def poll_flask():
                 print('Obs String')
                 print(obs_string)
                 print('----------------------------------------------------------------------')
-                # Poll endpoint
-                FLASK_URL = "http://192.168.2.122:5000/get_state"
-                try:
-                    resp = requests.post(
-                        FLASK_URL,
-                        json={"commands": act_values, "observations": obs_values},
-                        timeout=0.5
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()  # ← Changed from 'return' to assignment
-                        commands = data["commands"]
-                        observations = data["observations"]
-                        # ← Use commands/observations here for your recording logic
-                    else:
-                        print(f"HTTP {resp.status_code}")
-                except Exception as e:
-                    print(f"Error: {e}")
+
+                import urllib.parse
+
+                act_string = urllib.parse.quote("&".join(str(round(v,4)) for v in act_values))
+                obs_string = urllib.parse.quote("&".join(str(round(v,4)) for v in obs_values))
+
+                url = f"http://127.0.0.1:5000/get_state/api?act={act_string}&obs={obs_string}"
+
+                requests.get(url)
 
                 # # Send as GET parameter
                 # requests.get(
