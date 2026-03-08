@@ -628,7 +628,7 @@ def poll_flask():
             #         'lower_ring': lower_cmd,
             #         'gripper': 0.0  # add your gripper source here
             #     })
-
+            
             FlaskPositions = {
                 'upper_ring_deg'     : motorPositions[0],
                 'middle_ring_deg'    : motorPositions[1],
@@ -664,7 +664,7 @@ def poll_flask():
                 'lower_hinge': obs_lower,  
                 'upper_hinge': obs_upper,  
                 'end_effector': obs_ee,   
-                'gripper_servo': motorPositions[7] # Gripper needs to be worked on
+                'gripper': float(current_gripper_val)
             }
                         
             # Build action payload
@@ -708,8 +708,8 @@ def poll_flask():
                 print(FlaskPositions)
                 # print('Commanded positions')
                 # print(CommandedPositions)
-                # print('Act Data')
-                # print(act_data)
+                print('Act Data')
+                print(act_data)
                 print('Obs Data')
                 print(obs_data)
                 print('Obs String')
@@ -717,6 +717,13 @@ def poll_flask():
                 print('----------------------------------------------------------------------')
 
                 # Send as GET parameter
+                requests.get(
+                    'http://127.0.0.1:5000/get_state',
+                    params={'data': obs_string},
+                    timeout=0.1
+                )
+
+                    # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/receive_observations',
                     params={'data': obs_string},
