@@ -735,19 +735,25 @@ def poll_flask():
                 print(obs_string)
                 print('----------------------------------------------------------------------')
 
-                # Send as GET parameter
-                requests.get(
-                    'http://127.0.0.1:5000/get_state',
-                    params={'commands': FlaskPositions, 'observations' : obs_string},
-                    timeout=0.1
-                )
+                resp = requests.post('http://127.0.0.1:5000/get_state', json={
+                    "commands": act_values,
+                    "observations": obs_values
+                }, timeout=0.5)
+                data = resp.json()
+                
+                # # Send as GET parameter
+                # requests.get(
+                #     'http://127.0.0.1:5000/get_state',
+                #     params={'commands': FlaskPositions, 'observations' : obs_string},
+                #     timeout=0.1
+                # )
 
-                    # Send as GET parameter
-                requests.get(
-                    'http://127.0.0.1:5000/receive_observations',
-                    params={'data': obs_string},
-                    timeout=0.1
-                )
+                #     # Send as GET parameter
+                # requests.get(
+                #     'http://127.0.0.1:5000/receive_observations',
+                #     params={'data': obs_string},
+                #     timeout=0.1
+                # )
 
             except requests.exceptions.Timeout:
                 pass # ignore timeouts

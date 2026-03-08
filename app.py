@@ -87,32 +87,12 @@ def receive_observations():
         obs_values = [obs_copy[k] for k in OBS_ORDER]
         return "&".join(f"{v:.4f}" for v in obs_values)
 
-@app.route("/get_state")
+@app.route("/get_state", methods=["POST"])
 def get_state():
-    # Initialize default values
-    cmd_values = []
-    obs_values = []
-
-    # 1. Parse 'commands' - sent as multiple query params
-    cmd_list = request.args.getlist("commands")
-    if cmd_list:
-        try:
-            cmd_values = [float(x) for x in cmd_list]
-        except ValueError:
-            cmd_values = []
-
-    # 2. Parse 'observations' - sent as single &-delimited string
-    obs_param = request.args.get("observations")
-    if obs_param:
-        try:
-            obs_values = [float(x) for x in obs_param.split("&")]
-        except ValueError:
-            obs_values = []
-
-    # 3. Return structured JSON
+    data = request.get_json()
     return jsonify({
-        "commands": cmd_values,
-        "observations": obs_values
+        "commands": data["commands"],
+        "observations": data["observations"]
     })
    
 @app.route('/poses', methods=['GET', 'POST'])
