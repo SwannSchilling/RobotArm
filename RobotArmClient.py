@@ -740,7 +740,7 @@ def poll_flask():
                 act_string = urllib.parse.quote("&".join(str(round(v,4)) for v in act_values))
                 obs_string = urllib.parse.quote("&".join(str(round(v,4)) for v in obs_values))
 
-                url = f"http://127.0.0.1:5000/get_state/api?act={act_string}&obs={obs_string}"
+                url = f"http://127.0.0.1:5000/get_state?act={act_string}&obs={obs_string}"
 
                 requests.get(url)
 
