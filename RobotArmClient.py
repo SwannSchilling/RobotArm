@@ -628,6 +628,7 @@ def poll_flask():
             #         'lower_ring': lower_cmd,
             #         'gripper': 0.0  # add your gripper source here
             #     })
+
             FlaskPositions = {
                 'upper_ring_deg'     : motorPositions[0],
                 'middle_ring_deg'    : motorPositions[1],
@@ -654,18 +655,11 @@ def poll_flask():
                 'gripper_servo': current_gripper_val
             }
             
-            upper_raw  = recover_raw_input(cached[1], UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
-            middle_raw = recover_raw_input(cached[2], MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
-            lower_raw  = recover_raw_input(cached[3], LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
-            print (upper_raw)
-            print (middle_raw)
-            print (lower_raw)
-            
              # Build observation payload
             obs_data = {
-                'upper_ring': compute_ring_cmd(cached.get(1, 0.0), UPPER_RING_OFFSET, SERVO_INVERSIONS[1]),
-                'middle_ring': compute_ring_cmd(cached.get(2, 0.0), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
-                'lower_ring': compute_ring_cmd(cached.get(3, 0.0), LOWER_RING_OFFSET, SERVO_INVERSIONS[3]),
+                'upper_ring': recover_raw_input(cached[1], UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
+                'middle_ring': recover_raw_input(cached[2], MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
+                'lower_ring': recover_raw_input(cached[3], LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
                 'base': obs_base,         
                 'lower_hinge': obs_lower,  
                 'upper_hinge': obs_upper,  
@@ -714,8 +708,8 @@ def poll_flask():
                 print(FlaskPositions)
                 # print('Commanded positions')
                 # print(CommandedPositions)
-                print('Act Data')
-                print(act_data)
+                # print('Act Data')
+                # print(act_data)
                 print('Obs Data')
                 print(obs_data)
                 print('Obs String')
