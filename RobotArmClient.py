@@ -670,7 +670,7 @@ def poll_flask():
                 ]
                 
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
-                
+                print(obs_string)
                 # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/receive_observations',
@@ -680,7 +680,7 @@ def poll_flask():
 
             except requests.exceptions.Timeout:
                 pass # ignore timeouts
-            
+
         except Exception as e:
             print(f"Error: {e}")
 
