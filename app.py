@@ -168,12 +168,22 @@ def receive_observations():
         ]
         return "&".join(str(round(v, 4)) for v in values)
 
-@app.route('/get_state')
+# @app.route('/get_state')
+# def get_state():
+#     """Return actual robot state - source of truth for inference"""
+#     global latest_encoder_state
+#     # Return copy to avoid race conditions
+#     return "&".join([f"{x:.4f}".replace('.', ',') for x in latest_encoder_state[:]])
+
+@app.route("/get_state")
 def get_state():
-    """Return actual robot state - source of truth for inference"""
-    global latest_encoder_state
-    # Return copy to avoid race conditions
-    return "&".join([f"{x:.4f}".replace('.', ',') for x in latest_encoder_state[:]])
+    obs = request.args.get("data")
+
+    if obs:
+        values = [float(x) for x in obs.split("&")]
+        print(values)
+
+    return "ok"
 
 @app.route('/set_positions/<position>', methods=['GET','POST'])
 def set_positions(position):
