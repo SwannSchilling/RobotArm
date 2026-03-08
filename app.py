@@ -89,28 +89,23 @@ def receive_observations():
         obs_values = [obs_copy[k] for k in OBS_ORDER]
         return "&".join(f"{v:.4f}" for v in obs_values)
 
-@app.route("/get_state", methods=["GET"])
+@app.route("/get_state")
 def get_state():
-    # get encoded strings
+
     act_encoded = request.args.get("act", "")
     obs_encoded = request.args.get("obs", "")
 
-    # decode them
     act_decoded = urllib.parse.unquote(act_encoded)
     obs_decoded = urllib.parse.unquote(obs_encoded)
 
-    # split and convert back to floats
-    act_values = [float(v) for v in act_decoded.split("&") if v]
-    obs_values = [float(v) for v in obs_decoded.split("&") if v]
+    act_values = [float(v.replace(",", ".")) for v in act_decoded.split("&") if v]
+    obs_values = [float(v.replace(",", ".")) for v in obs_decoded.split("&") if v]
 
     print("act:", act_values)
     print("obs:", obs_values)
 
-    return jsonify({
-        "act": act_values,
-        "obs": obs_values
-    })
-   
+    return jsonify({"act": act_values, "obs": obs_values})
+
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():
     """Endpoint for web interface to set poses"""
