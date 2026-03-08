@@ -89,13 +89,17 @@ def receive_observations():
 
 @app.route("/get_state")
 def get_state():
-    obs = request.args.get("data")
+    cmd = request.args.get("commands")
+    obs = request.args.get("observations")
 
     if obs:
-        values = [float(x) for x in obs.split("&")]
-        print(values)
+        obs_values = [float(x) for x in obs.split("&")]
+        print(obs_values)
 
-    return json.dumps(values)
+    if cmd:
+        cmd_values = [float(x) for x in obs.split("&")]
+        print(cmd_values)
+    return json.dumps(cmd_values,obs_values)
    
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():

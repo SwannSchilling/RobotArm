@@ -661,7 +661,7 @@ def poll_flask():
                 'upper_ring': recover_raw_input(cached[1], UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
                 'middle_ring': recover_raw_input(cached[2], MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
                 'lower_ring': recover_raw_input(cached[3], LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
-                
+
                 'base': obs_base,         
                 'lower_hinge': obs_lower,  
                 'upper_hinge': obs_upper,  
@@ -721,7 +721,7 @@ def poll_flask():
                 # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/get_state',
-                    params={'data': obs_string},
+                    params={'commands': FlaskPositions, 'observations' : obs_string},
                     timeout=0.1
                 )
 
