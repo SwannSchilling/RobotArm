@@ -9,10 +9,10 @@ import logging
 import os
 import platform
 import threading
-# logging.getLogger('werkzeug').setLevel(logging.ERROR)
-# logging.getLogger('werkzeug').disabled = True
-# Global storage for latest observations
-# Storage for observations (local to THIS script)
+app = Flask(__name__)
+from flask import Flask, request
+from threading import Lock
+
 latest_observations = {
     'upper_ring': 0.0,
     'middle_ring': 0.0,
@@ -55,8 +55,49 @@ def get_ip_addresses():
     except Exception:
         return ["127.0.0.1"]
 
-app = Flask(__name__)
+# Thread-safe storage
+latest_observations = {}
+obs_lock = Lock()
 
+# Define canonical order for observations
+OBS_ORDER = [
+    'upper_ring', 'middle_ring', 'lower_ring',
+    'base', 'lower_hinge', 'upper_hinge',
+    'end_effector', 'gripper'
+]
+
+@app.route("/receive_observations")
+def receive_observations():
+    """Robot sends observations here or queries latest observations."""
+    global latest_observations
+
+    data_string = request.args.get('data', '')
+
+    if data_string:
+        # Receiving data FROM robot
+        try:
+            values = [float(v.replace(',', '.')) for v in data_string.split('&')]
+            if len(values) != len(OBS_ORDER):
+                return f"Error: Expected {len(OBS_ORDER)} values, got {len(values)}", 400
+
+            with obs_lock:
+                latest_observations = {k: v for k, v in zip(OBS_ORDER, values)}
+            return "OK", 200
+
+        except Exception as e:
+            return f"Error parsing data: {e}", 400
+
+    else:
+        # Querying stored observations
+        with obs_lock:
+            if not latest_observations:
+                return "No observations received yet", 404
+            obs_copy = latest_observations.copy()
+
+        # Return as a predictable string
+        obs_values = [obs_copy[k] for k in OBS_ORDER]
+        return "&".join(f"{v:.4f}" for v in obs_values)
+    
 @app.route('/poses', methods=['GET', 'POST'])
 def set_pose():
     """Endpoint for web interface to set poses"""
@@ -131,42 +172,42 @@ def return_positions():
 #     print(motorPositions)
 #     return json.dumps(motorPositions)
 
-@app.route("/receive_observations")
-def receive_observations():
-    """Robot sends observations here"""
-    global latest_observations
+# @app.route("/receive_observations")
+# def receive_observations():
+#     """Robot sends observations here"""
+#     global latest_observations
     
-    data_string = request.args.get('data', '')
+#     data_string = request.args.get('data', '')
     
-    if data_string:
-        # Receiving data FROM robot
-        try:
-            values = [float(v) for v in data_string.split('&')]
-            if len(values) == 8:
-                with obs_lock:
-                    latest_observations = {
-                        'upper_ring': values[0],
-                        'middle_ring': values[1],
-                        'lower_ring': values[2],
-                        'base': values[3],
-                        'lower_hinge': values[4],
-                        'upper_hinge': values[5],
-                        'end_effector': values[6],
-                        'gripper': values[7]
-                    }
-                return "OK", 200
-        except Exception as e:
-            return f"Error: {e}", 400
-    else:
-        # Querying stored observations
-        with obs_lock:
-            obs = latest_observations.copy()
-        values = [
-            obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
-            obs['base'], obs['lower_hinge'], obs['upper_hinge'],
-            obs['end_effector'], obs['gripper']
-        ]
-        return "&".join(str(round(v, 4)) for v in values)
+#     if data_string:
+#         # Receiving data FROM robot
+#         try:
+#             values = [float(v) for v in data_string.split('&')]
+#             if len(values) == 8:
+#                 with obs_lock:
+#                     latest_observations = {
+#                         'upper_ring': values[0],
+#                         'middle_ring': values[1],
+#                         'lower_ring': values[2],
+#                         'base': values[3],
+#                         'lower_hinge': values[4],
+#                         'upper_hinge': values[5],
+#                         'end_effector': values[6],
+#                         'gripper': values[7]
+#                     }
+#                 return "OK", 200
+#         except Exception as e:
+#             return f"Error: {e}", 400
+#     else:
+#         # Querying stored observations
+#         with obs_lock:
+#             obs = latest_observations.copy()
+#         values = [
+#             obs['upper_ring'], obs['middle_ring'], obs['lower_ring'],
+#             obs['base'], obs['lower_hinge'], obs['upper_hinge'],
+#             obs['end_effector'], obs['gripper']
+#         ]
+#         return "&".join(str(round(v, 4)) for v in values)
 
 # @app.route('/get_state')
 # def get_state():
