@@ -531,21 +531,20 @@ def poll_flask():
                 act_ee    =  (odrv0.axis0.controller.pos_setpoint / 40) * 360
 
             if SPM_Waveshare:
-                upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
-                middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
-                lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  -1)
+                # Ring servos
+                cached = controller.get_cached_angles()
+                upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
+                middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
+                lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
+                # upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
+                # middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
+                # lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  -1)
 
                 controller.set_multiple_target_angles({
                     1: upper_cmd,
                     2: middle_cmd,
                     3: lower_cmd
                 })
-
-                # Ring servos
-                cached = controller.get_cached_angles()
-                upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
-                middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
-                lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
@@ -626,6 +625,17 @@ def poll_flask():
             #         'gripper': 0.0  # add your gripper source here
             #     })
 
+            NormalizedPositions = {
+                'base_norm': Base_Rotation_norm,
+                'lower_hinge_norm': LowerHinge_Rotation_norm,
+                'upper_hinge_norm': UpperHinge_Rotation_norm,
+                'end_effector_norm': EndEffector_Rotation_norm,
+                'upper_ring_norm': compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
+                'middle_ring_norm': compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
+                'lower_ring_norm': lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3]),
+                'gripper': float(current_gripper_val)  # Actual gripper position
+            }
+
              # Build observation payload
             obs_data = {
                 'base': obs_base,
@@ -671,9 +681,13 @@ def poll_flask():
                 
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
                 print('----------------------------------------------------------------------')
+                print('Normalized positions')
+                print(NormalizedPositions)
                 print('Act Data')
                 print(act_data)
                 print('Obs Data')
+                print(obs_data)
+                print('Obs String')
                 print(obs_string)
                 print('----------------------------------------------------------------------')
 
