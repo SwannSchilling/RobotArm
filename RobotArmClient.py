@@ -691,6 +691,19 @@ def poll_flask():
             # Send observations to your existing Flask server
             try:
                 # Format as your server expects: value1&value2&...
+                act_values = [
+                    FlaskPositions['upper_ring_deg'],
+                    FlaskPositions['middle_ring_deg'],
+                    FlaskPositions['lower_ring_deg'],
+
+                    FlaskPositions['Base_Rotation'],
+                    FlaskPositions['LowerHinge_Rotation'],
+                    FlaskPositions['UpperHinge_Rotation'],
+                    FlaskPositions['EndEffector_Rotation'],
+
+                    FlaskPositions['gripper_servo']
+                ]
+
                 obs_values = [
                     obs_data['upper_ring'],
                     obs_data['middle_ring'],
@@ -704,16 +717,20 @@ def poll_flask():
                     obs_data['gripper']
                 ]
                 
+                act_string = "&".join(str(round(v, 4)) for v in act_values)
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
+        
                 print('----------------------------------------------------------------------')
-                print('Flask positions')
-                print(FlaskPositions)
+                # print('Flask positions')
+                # print(FlaskPositions)
                 # print('Commanded positions')
                 # print(CommandedPositions)
-                print('Act Data')
-                print(act_data)
-                print('Obs Data')
-                print(obs_data)
+                # print('Act Data')
+                # print(act_data)
+                # print('Obs Data')
+                # print(obs_data)
+                print('Act String')
+                print(act_string)
                 print('Obs String')
                 print(obs_string)
                 print('----------------------------------------------------------------------')
