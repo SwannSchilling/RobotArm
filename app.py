@@ -90,6 +90,12 @@ def receive_observations():
 @app.route("/get_state", methods=["POST"])
 def get_state():
     data = request.get_json()
+    
+    # Debug prints on server side
+    print(f"🔥 FLASK RECEIVED:")
+    print(f"   commands: {data.get('commands')}")
+    print(f"   observations: {data.get('observations')}")
+    
     return jsonify({
         "commands": data["commands"],
         "observations": data["observations"]
