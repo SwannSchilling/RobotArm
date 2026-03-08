@@ -629,7 +629,7 @@ def poll_flask():
                 'LowerHinge_Rotation' : motorPositions[4],
                 'UpperHinge_Rotation' : motorPositions[5],
                 'EndEffector_Rotation' : motorPositions[6],
-                
+
                 'upper_ring_deg': upper_cmd,
                 'middle_ring_deg': middle_cmd,
                 'lower_ring_deg': lower_cmd,
@@ -708,6 +708,13 @@ def poll_flask():
                 print('----------------------------------------------------------------------')
 
                 # Send as GET parameter
+                requests.get(
+                    'http://127.0.0.1:5000/get_state',
+                    params={'data': obs_string},
+                    timeout=0.1
+                )
+
+                    # Send as GET parameter
                 requests.get(
                     'http://127.0.0.1:5000/receive_observations',
                     params={'data': obs_string},
