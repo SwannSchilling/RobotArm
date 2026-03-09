@@ -377,7 +377,7 @@ def poll_flask():
 
     def compute_ring_cmd(raw_input, offset, inversion):
         cmd = RING_SCALE * (raw_input + offset)
-        cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # clamp to safe range
+        # cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # removed clamp to safe range
         return cmd * inversion
     
     def recover_raw_input(cmd, offset, inversion):
