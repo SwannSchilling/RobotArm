@@ -77,7 +77,7 @@ TEMP_THRESHOLD = 50.0
 # Initialize last positions and timeouts
 last_odrive_positions = [float('-inf')] * 4
 last_position_change_time = [0] * 4  # Track the last time each motor's position changed
-idle_timeout = 10.0  # Time in seconds after which to idle the motor if position hasn't changed
+idle_timeout = 100.0  # Time in seconds after which to idle the motor if position hasn't changed
 idle_threshold = 0.01  # Define a threshold for position change to avoid floating-point issues
 
 start_moving = True
