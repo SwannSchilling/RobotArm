@@ -486,6 +486,24 @@ def poll_flask():
                     act_upper       = odrv0.axis1.controller.pos_setpoint
                     act_ee          = odrv0.axis0.controller.pos_setpoint
 
+                    # # Convert both to degrees in the same coordinate space
+                    # def odrive_to_deg_base(turns):
+                    #     return -(turns / 50) * 360   # inverted, 50:1
+
+                    # def odrive_to_deg_lower(turns):
+                    #     return -(turns / 50) * 360   # inverted, 50:1
+
+                    # def odrive_to_deg_upper(turns):
+                    #     return  (turns / 40) * 360   # not inverted, 40:1
+
+                    # def odrive_to_deg_ee(turns):
+                    #     return  (turns / 40) * 360   # not inverted, 40:1
+
+                    # print(f"Base:        obs={odrive_to_deg_base(obs_base):+.3f} | act={odrive_to_deg_base(act_base):+.3f} | err={odrive_to_deg_base(act_base - obs_base):+.3f}")
+                    # print(f"LowerHinge:  obs={odrive_to_deg_lower(obs_lower):+.3f} | act={odrive_to_deg_lower(act_lower):+.3f} | err={odrive_to_deg_lower(act_lower - obs_lower):+.3f}")
+                    # print(f"UpperHinge:  obs={odrive_to_deg_upper(obs_upper):+.3f} | act={odrive_to_deg_upper(act_upper):+.3f} | err={odrive_to_deg_upper(act_upper - obs_upper):+.3f}")
+                    # print(f"EndEffector: obs={odrive_to_deg_ee(obs_ee):+.3f} | act={odrive_to_deg_ee(act_ee):+.3f} | err={odrive_to_deg_ee(act_ee - obs_ee):+.3f}")
+                    
                 elif current_time - last_position_change_time > idle_timeout:
                     if not idle_flag:
                         print("No motor positions have changed for timeout duration")
@@ -578,7 +596,50 @@ def poll_flask():
                         print(f"OpenCM Feedback: {response}")
                     except Exception as e:
                         print(f"Serial Read Error: {e}")
+
+            # if Gripper == True:
+            #     if not serial_Gripper.is_open:
+            #         serial_Gripper.open()
+                
+            #     Gripper_State = int(motorPositions[7])
+            #     if Gripper_State == 2:
+            #         serial_Gripper.write(b'a')
+            #     elif Gripper_State == 1:
+            #         serial_Gripper.write(b'b')
+            #     elif Gripper_State == 0:
+            #         #serial_Gripper.write(b'0')
+            #         serial_Gripper.close()
+
+            # # Atomically update shared state
+            # with obs_act_lock:
+            #     latest_obs.update({
+            #         'base': obs_base, 'lower_hinge': obs_lower,
+            #         'upper_hinge': obs_upper, 'end_effector': obs_ee,
+            #         'upper_ring': cached.get(1, 0.0),
+            #         'middle_ring': cached.get(2, 0.0),
+            #         'lower_ring':  cached.get(3, 0.0),
+            #         'gripper': 0.0  # add your gripper source here
+            #     })
+            #     latest_act.update({
+            #         'base': act_base, 'lower_hinge': act_lower,
+            #         'upper_hinge': act_upper, 'end_effector': act_ee,
+            #         'upper_ring': upper_cmd, 'middle_ring': middle_cmd,
+            #         'lower_ring': lower_cmd,
+            #         'gripper': 0.0  # add your gripper source here
+            #     })
             
+            CommandedPositions = {
+                'upper_ring_deg': upper_cmd,
+                'middle_ring_deg': middle_cmd,
+                'lower_ring_deg': lower_cmd,
+
+                'base_turns': Base_Rotation_norm,
+                'lower_hinge_turns': LowerHinge_Rotation_norm,
+                'upper_hinge_turns': UpperHinge_Rotation_norm,
+                'end_effector_turns': EndEffector_Rotation_norm,
+
+                'gripper_servo': current_gripper_val
+            }
 
             FlaskPositions = {
                 'upper_ring_deg'     : motorPositions[0],
@@ -605,7 +666,26 @@ def poll_flask():
                 'upper_hinge': obs_upper,  
                 'end_effector': obs_ee,   
                 'gripper': motorPositions[7]
-            }                      
+            }
+                        
+            # Build action payload
+            act_data = {
+                'upper_ring': upper_cmd,
+                'middle_ring': middle_cmd,
+                'lower_ring': lower_cmd,
+
+                'base': act_base,
+                'lower_hinge': act_lower,
+                'upper_hinge': act_upper,
+                'end_effector': act_ee,
+                
+                'gripper': float(current_gripper_val)
+            }
+
+            # # Update local cache (for your new endpoints if you keep them)
+            # with obs_act_lock:
+            #     latest_obs.update(obs_data)
+            #     latest_act.update(act_data)
 
             # Send observations to your existing Flask server
             try:
@@ -638,22 +718,42 @@ def poll_flask():
                 
                 act_string = "&".join(str(round(v, 4)) for v in act_values)
                 obs_string = "&".join(str(round(v, 4)) for v in obs_values)
-                act_values_rounded = [round(v,4) for v in act_values]
-                obs_values_rounded = [round(v,4) for v in obs_values]
-
+        
                 print('----------------------------------------------------------------------')
+                # print('Flask positions')
+                # print(FlaskPositions)
+                # print('Commanded positions')
+                # print(CommandedPositions)
+                # print('Act Data')
+                # print(act_data)
+                # print('Obs Data')
+                # print(obs_data)
                 print('Act String')
                 print(act_string)
-                print('Act Values')
-                print(act_values_rounded)
                 print('Obs String')
                 print(obs_string)
-                print('Obs Values')
-                print(obs_values_rounded)
                 print('----------------------------------------------------------------------')
 
                 url = "http://127.0.0.1:5000/get_state"
+
+                act_values_rounded = [round(v,4) for v in act_values]
+                obs_values_rounded = [round(v,4) for v in obs_values]
+
                 response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
+
+                # # Send as GET parameter
+                # requests.get(
+                #     'http://127.0.0.1:5000/get_state',
+                #     params={'commands': FlaskPositions, 'observations' : obs_string},
+                #     timeout=0.1
+                # )
+
+                #     # Send as GET parameter
+                # requests.get(
+                #     'http://127.0.0.1:5000/receive_observations',
+                #     params={'data': obs_string},
+                #     timeout=0.1
+                # )
 
             except requests.exceptions.Timeout:
                 pass # ignore timeouts
