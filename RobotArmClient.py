@@ -386,9 +386,21 @@ def poll_flask():
 
     motorPositions = [0.0] * 8  # initialized once per thread run
     print(f"Initialized motorPositions with length: {len(motorPositions)}")
-    current_time = time.time()
+    
+    cached = {1: 0.0, 2: 0.0, 3: 0.0}
+    obs_base = 0.0
+    obs_lower = 0.0
+    obs_upper = 0.0
+    obs_ee = 0.0
+    upper_cmd = 0.0
+    middle_cmd = 0.0
+    lower_cmd = 0.0
 
     while running_event.is_set():
+        # ============================================================================
+        current_time = time.time()
+        # ============================================================================
+        
         try:
             url = 'http://127.0.0.1:5000/return_positions'
             response = requests.get(url, timeout=0.5)
@@ -521,9 +533,6 @@ def poll_flask():
                 upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
                 middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
                 lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
-                # upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  -1)
-                # middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, -1)
-                # lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  -1)
 
                 controller.set_multiple_target_angles({
                     1: upper_cmd,
@@ -594,7 +603,7 @@ def poll_flask():
             }
         
             
-             # Build observation payload
+            # Build observation payload
             obs_data = {
                 'upper_ring': recover_raw_input(cached[1], UPPER_RING_OFFSET,  SERVO_INVERSIONS[1]),
                 'middle_ring': recover_raw_input(cached[2], MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2]),
@@ -609,7 +618,6 @@ def poll_flask():
 
             # Send observations to your existing Flask server
             try:
-                # Format as your server expects: value1&value2&...
                 act_values = [
                     FlaskPositions['upper_ring_deg'],
                     FlaskPositions['middle_ring_deg'],
@@ -636,21 +644,8 @@ def poll_flask():
                     obs_data['gripper']
                 ]
                 
-                act_string = "&".join(str(round(v, 4)) for v in act_values)
-                obs_string = "&".join(str(round(v, 4)) for v in obs_values)
                 act_values_rounded = [round(v,4) for v in act_values]
                 obs_values_rounded = [round(v,4) for v in obs_values]
-
-                print('----------------------------------------------------------------------')
-                print('Act String')
-                print(act_string)
-                print('Act Values')
-                print(act_values_rounded)
-                print('Obs String')
-                print(obs_string)
-                print('Obs Values')
-                print(obs_values_rounded)
-                print('----------------------------------------------------------------------')
 
                 url = "http://127.0.0.1:5000/get_state"
                 response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
