@@ -102,7 +102,7 @@ def receive_robot_data():
 
 @app.route("/get_state/latest", methods=["GET"])
 def send_to_friends():
-    # Friends can GET this endpoint to read the latest data
+    # GET this endpoint to read the latest data
     return jsonify(latest_robot_data)
 
 @app.route('/poses', methods=['GET', 'POST'])

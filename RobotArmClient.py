@@ -518,7 +518,6 @@ def poll_flask():
 
             if SPM_Waveshare:
                 # Ring servos
-                cached = controller.get_cached_angles()
                 upper_cmd  = compute_ring_cmd(float(motorPositions[0]), UPPER_RING_OFFSET,  SERVO_INVERSIONS[1])
                 middle_cmd = compute_ring_cmd(float(motorPositions[1]), MIDDLE_RING_OFFSET, SERVO_INVERSIONS[2])
                 lower_cmd  = compute_ring_cmd(float(motorPositions[2]), LOWER_RING_OFFSET,  SERVO_INVERSIONS[3])
@@ -528,6 +527,9 @@ def poll_flask():
                     2: middle_cmd,
                     3: lower_cmd
                 })
+
+                time.sleep(0.01)  # Small delay to let servos update (optional, test without first)
+                cached = controller.get_cached_angles()
 
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
@@ -564,8 +566,8 @@ def poll_flask():
                         last_serial_time = now
 
                         # Optional debug
-                        print(f"Sent to OpenCM: {current_gripper_val}")
-                        print(f"Gripper raw:{raw_val} mapped:{servo_val}")
+                        # print(f"Sent to OpenCM: {current_gripper_val}")
+                        # print(f"Gripper raw:{raw_val} mapped:{servo_val}")
                 except ValueError:
                     print("Invalid gripper value received")
 
