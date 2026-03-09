@@ -373,15 +373,12 @@ def poll_flask():
     MIDDLE_RING_OFFSET = 60.0
     LOWER_RING_OFFSET  = 0.0
     RING_SCALE         = 5.0
-    RING_MAX_DEG       = 45.0  # your configured servo range
 
     def compute_ring_cmd(raw_input, offset, inversion):
         cmd = RING_SCALE * (raw_input + offset)
-        # cmd = max(-RING_MAX_DEG, min(RING_MAX_DEG, cmd))  # removed clamp to safe range
         return cmd * inversion
     
     def recover_raw_input(cmd, offset, inversion):
-        # assumes cmd is within [-RING_MAX_DEG, RING_MAX_DEG]
         return (cmd / inversion) / RING_SCALE - offset
 
     motorPositions = [0.0] * 8  # initialized once per thread run
@@ -531,14 +528,6 @@ def poll_flask():
                 time.sleep(0.01)  # Small delay to let servos update (optional, test without first)
                 cached = controller.get_cached_angles()
 
-                # ============ COMPLETE DEBUG ============
-                print(f"SERVO DEBUG:")
-                print(f"  Flask raw:     upper={motorPositions[0]:.2f}, middle={motorPositions[1]:.2f}, lower={motorPositions[2]:.2f}")
-                print(f"  Commands sent: 1={upper_cmd:.2f}, 2={middle_cmd:.2f}, 3={lower_cmd:.2f}")
-                print(f"  Cached read:   1={cached[1]:.2f}, 2={cached[2]:.2f}, 3={cached[3]:.2f}")
-                print(f"  Full cached dict: {cached}")
-                # ========================================
-
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
             GRIPPER_OPEN = 180
@@ -645,12 +634,6 @@ def poll_flask():
                 
                 act_values_rounded = [round(v,4) for v in act_values]
                 obs_values_rounded = [round(v,4) for v in obs_values]
-                print('----------------------------------------------------------------------')
-                print('Act String')
-                print(act_values_rounded)
-                print('Obs String')
-                print(obs_values_rounded)
-                print('----------------------------------------------------------------------')
 
                 url = "http://127.0.0.1:5000/get_state"
                 response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
