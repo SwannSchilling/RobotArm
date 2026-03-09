@@ -493,11 +493,6 @@ def poll_flask():
                     obs_upper       = odrv0.axis1.encoder.pos_estimate
                     obs_ee          = odrv0.axis0.encoder.pos_estimate
 
-                    act_base        = odrv1.axis1.controller.pos_setpoint  # turns
-                    act_lower       = odrv1.axis0.controller.pos_setpoint
-                    act_upper       = odrv0.axis1.controller.pos_setpoint
-                    act_ee          = odrv0.axis0.controller.pos_setpoint
-
                 elif current_time - last_position_change_time > idle_timeout:
                     if not idle_flag:
                         print("No motor positions have changed for timeout duration")
@@ -520,12 +515,6 @@ def poll_flask():
                 obs_lower = -(odrv1.axis0.encoder.pos_estimate / 50) * 360
                 obs_upper =  (odrv0.axis1.encoder.pos_estimate / 40) * 360
                 obs_ee    =  (odrv0.axis0.encoder.pos_estimate / 40) * 360
-
-                # ODrive actions (setpoint)
-                act_base  = -(odrv1.axis1.controller.pos_setpoint / 50) * 360
-                act_lower = -(odrv1.axis0.controller.pos_setpoint / 50) * 360
-                act_upper =  (odrv0.axis1.controller.pos_setpoint / 40) * 360
-                act_ee    =  (odrv0.axis0.controller.pos_setpoint / 40) * 360
 
             if SPM_Waveshare:
                 # Ring servos
@@ -646,6 +635,12 @@ def poll_flask():
                 
                 act_values_rounded = [round(v,4) for v in act_values]
                 obs_values_rounded = [round(v,4) for v in obs_values]
+                print('----------------------------------------------------------------------')
+                print('Act String')
+                print(act_values_rounded)
+                print('Obs String')
+                print(obs_values_rounded)
+                print('----------------------------------------------------------------------')
 
                 url = "http://127.0.0.1:5000/get_state"
                 response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
