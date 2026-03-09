@@ -572,7 +572,7 @@ def poll_flask():
                 if serial_OpenCM.in_waiting > 0:
                     try:
                         response = serial_OpenCM.readline().decode().strip()
-                        print(f"OpenCM Feedback: {response}")
+                        # print(f"OpenCM Feedback: {response}")
                     except Exception as e:
                         print(f"Serial Read Error: {e}")
             
