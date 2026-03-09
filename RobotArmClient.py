@@ -531,6 +531,14 @@ def poll_flask():
                 time.sleep(0.01)  # Small delay to let servos update (optional, test without first)
                 cached = controller.get_cached_angles()
 
+                # ============ COMPLETE DEBUG ============
+                print(f"SERVO DEBUG:")
+                print(f"  Flask raw:     upper={motorPositions[0]:.2f}, middle={motorPositions[1]:.2f}, lower={motorPositions[2]:.2f}")
+                print(f"  Commands sent: 1={upper_cmd:.2f}, 2={middle_cmd:.2f}, 3={lower_cmd:.2f}")
+                print(f"  Cached read:   1={cached[1]:.2f}, 2={cached[2]:.2f}, 3={cached[3]:.2f}")
+                print(f"  Full cached dict: {cached}")
+                # ========================================
+
             global MIN_DELTA, SERIAL_RATE, last_serial_time, current_gripper_val
 
             GRIPPER_OPEN = 180
