@@ -399,7 +399,8 @@ def poll_flask():
         # ============================================================================
         
         try:
-            url = 'http://127.0.0.1:5000/return_positions'
+            #url = 'http://127.0.0.1:5000/return_positions'
+            url = 'http://192.168.2.136:5000/return_positions'
             response = requests.get(url, timeout=0.5)
             # print(f"Response body: {response.text}")
 
@@ -635,7 +636,8 @@ def poll_flask():
                 act_values_rounded = [round(v,4) for v in act_values]
                 obs_values_rounded = [round(v,4) for v in obs_values]
 
-                url = "http://127.0.0.1:5000/get_state"
+                #url = "http://127.0.0.1:5000/get_state"
+                url = 'http://192.168.2.136:5000/get_state'
                 response = requests.post(url, json={"act": act_values_rounded, "obs": obs_values_rounded})
 
             except requests.exceptions.Timeout:
