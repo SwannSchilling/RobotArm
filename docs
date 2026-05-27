@@ -1,0 +1,682 @@
+# AK-Series Robotic Actuator - Communication Protocol Documentation
+
+## Table of Contents
+1. [Overview](#overview)
+2. [Hardware Specifications](#hardware-specifications)
+3. [CAN Bus Protocol](#can-bus-protocol)
+4. [Serial Port Protocol](#serial-port-protocol)
+5. [Servo Mode Control Commands](#servo-mode-control-commands)
+6. [Force Control Mode (MIT)](#force-control-mode-mit)
+7. [Feedback Messages](#feedback-messages)
+8. [Error Codes](#error-codes)
+9. [Code Examples](#code-examples)
+
+---
+
+## Overview
+
+The AK-series robotic actuator from CubeMars uses two primary communication interfaces:
+- **CAN Bus**: Primary interface for real-time control and feedback
+- **Serial Port (UART)**: Secondary interface for configuration and debugging
+
+The driver board adopts Field Oriented Control (FOC) algorithm with advanced self-disturbance control technology for speed and angle control.
+
+### Supported Driver Models
+| Model | Rated Current (RMS) | Max Current (Ap) | Size |
+|-------|-------------------|-----------------|------|
+| AK54-4810-1C-A2 | 10A | 30A | 54mm × 54mm |
+| AK60-4820-1C-A2 | 20A | 60A | 63mm × 57mm |
+| AK80-4830-1C-A4 | 30A | 90A | 76.33mm × 85mm |
+
+### General Specifications
+- **Allowable input voltage**: 48V
+- **Working voltage range**: 18-52V
+- **CAN bus bitrate**: Up to 1Mbps
+- **Inner-loop encoder resolution**: 21-bit (single-loop absolute)
+- **Operating temperature**: -20°C to 65°C
+- **Max driver board temperature**: 100°C
+
+---
+
+## Hardware Specifications
+
+### Driver Board Interfaces
+
+#### AK54-4810-1C-A2 & AK60-4820-1C-A2
+
+**Serial Communication Port (3-pin)**
+| Pin | Function | Color |
+|-----|----------|-------|
+| 1 | GND | Black |
+| 2 | RX (Input) | Yellow |
+| 3 | TX (Output) | Green |
+
+**Power & CAN Port (4-pin)**
+| Pin | Function | Color |
+|-----|----------|-------|
+| 1 | Power (+) | Red |
+| 2 | Power (-) | Black |
+| 3 | CAN_H | White |
+| 4 | CAN_L | Blue |
+
+#### AK80-4830-1C-A4
+
+**Power Port**
+| Pin | Function | Color |
+|-----|----------|-------|
+| 1 | Power (+) | Red |
+| 2 | Power (-) | Black |
+
+**CAN Communication (4-pin)**
+| Pin | Function | Color |
+|-----|----------|-------|
+| 1 | CAN_L | Blue |
+| 2 | CAN_H | White |
+| 3 | CAN_H | White |
+| 4 | CAN_L | Blue |
+
+**Serial Communication (3-pin)**
+| Pin | Function | Color |
+|-----|----------|-------|
+| 1 | GND | Black |
+| 2 | RX (Input) | Yellow |
+| 3 | TX (Output) | Green |
+
+### Indicator Lights
+| Light | Color | Meaning |
+|-------|-------|---------|
+| Power | Blue | Driver board is powered |
+| Operation | Green | Motor is working |
+| Fault | Red | Driver board fault |
+
+---
+
+## CAN Bus Protocol
+
+### Frame Structure
+
+The CAN protocol uses **Extended Frame** format with 8 bytes of data.
+
+#### CAN ID Structure
+```
+|<-- bits [28]-[8] -->|<-- bits [7]-[0] -->|
+|   Control Mode ID    |       Drive ID     |
+```
+
+**CAN ID = (Control_Mode_ID << 8) | Drive_ID**
+
+### Control Mode IDs
+
+| Mode ID | Control Mode | Description |
+|---------|-------------|-------------|
+| 0 | Duty Cycle Mode | Set duty cycle voltage |
+| 1 | Current Loop Mode | Set Iq current (torque) |
+| 2 | Current Brake Mode | Set braking current |
+| 3 | Velocity Loop Mode | Set operating speed |
+| 4 | Position Loop Mode | Set target position |
+| 5 | Setting Origin Mode | Set zero position |
+| 6 | Position-Velocity Loop Mode | Set position, speed, and acceleration |
+| 8 | Force Control (MIT) Mode | Force control mode |
+| 15 | Motor Disable Mode | Disable motor output |
+| 16 | Feedback Message Configuration | Configure feedback frames |
+
+### Function IDs (Feedback Messages)
+
+| Function ID | Description |
+|-------------|-------------|
+| 0x2C | Start frame (sent when motor enters servo mode) |
+| 0x29 | Real-time status feedback frame |
+| 0x2A | Optional 4-byte position feedback frame |
+
+---
+
+## Serial Port Protocol
+
+### Frame Format
+
+```
+| Header | Data Length | Data Frame | Checksum (High) | Checksum (Low) | Tail |
+| 0xAA   | 1-2 bytes   | Variable   | 1 byte          | 1 byte         | 0xBB |
+```
+
+**Header**: `0xAA` (for ≤256 bytes) or `0xAB` (for >256 bytes)
+**Data Length**: Excludes header, checksum, and tail
+**Checksum**: CRC-16 (see CRC calculation below)
+**Tail**: `0xBB`
+
+### Serial Command IDs
+
+| ID | Command | Description |
+|----|---------|-------------|
+| 60 | COMM_SET_POS_SPD | Position-Velocity Loop Mode |
+| 61 | COMM_SET_POS_MULTI | Multi-circle motion mode |
+| 62 | COMM_SET_POS_SINGLE | Single-circle motion mode |
+| 63 | COMM_SET_POS_UNLIMITED | Unlimited position mode |
+| 64 | COMM_SET_POS_ORIGIN | Set motor origin |
+| 65 | COMM_FW_VERSION | Firmware version |
+| 66 | COMM_JUMP_TO_BOOTLOADER | Jump to bootloader |
+| 67 | COMM_ERASE_NEW_APP | Erase new app |
+| 68 | COMM_WRITE_NEW_APP_DATA | Write new app data |
+| 69 | COMM_GET_VALUES | Get motor operating parameters |
+| 70 | COMM_SET_DUTY | Duty cycle mode |
+| 71 | COMM_SET_CURRENT | Current loop mode |
+| 72 | COMM_SET_CURRENT_BRAKE | Current brake mode |
+| 73 | COMM_SET_RPM | Velocity loop mode |
+| 74 | COMM_SET_POS | Position loop mode |
+| 75 | COMM_SET_HANDBRAKE | Handbrake current loop mode |
+| 76 | COMM_SET_DETECT | Real-time position feedback |
+| 87 | COMM_ROTOR_POSITION | Feedback current position |
+| 16 | COMM_GET_VALUES_SETUP | Setup for getting values |
+
+### CRC-16 Calculation
+
+```c
+const unsigned short crc16_tab[] = {
+    0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
+    0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
+    // ... (full 256-entry table in manual)
+};
+
+unsigned short crc16(unsigned char *buf, unsigned int len) {
+    unsigned short cksum = 0;
+    for (int i = 0; i < len; i++) {
+        cksum = crc16_tab[(((cksum >> 8) ^ buf[i]) & 0xFF)] ^ (cksum << 8);
+    }
+    return cksum;
+}
+```
+
+---
+
+## Servo Mode Control Commands
+
+### 1. Duty Cycle Mode (ID: 0)
+
+**CAN ID**: `(0 << 8) | Drive_ID`
+
+**Data Format** (4 bytes, Big-Endian int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Duty = (int32) / 100000.0`
+**Range**: -1.0 to 1.0 (typical: -0.95 to 0.95)
+
+**Example**: 0.20 duty cycle → send `0x00004E20`
+
+### 2. Current Loop Mode (ID: 1)
+
+**CAN ID**: `(1 << 8) | Drive_ID`
+
+**Data Format** (4 bytes, Big-Endian int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Current = (int32) / 1000.0`
+**Range**: -60A to 60A (-60000 to 60000)
+
+**Example**: 5A → send `0x00001388`
+
+### 3. Current Brake Mode (ID: 2)
+
+**CAN ID**: `(2 << 8) | Drive_ID`
+
+**Data Format** (4 bytes, Big-Endian int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Brake_Current = (int32) / 1000.0`
+**Range**: 0A to 60A (0 to 60000)
+
+**Example**: 5A brake → send `0x00001388`
+
+### 4. Velocity Loop Mode (ID: 3)
+
+**CAN ID**: `(3 << 8) | Drive_ID`
+
+**Data Format** (4 bytes, Big-Endian int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Speed = int32` (direct ERPM value)
+**Range**: -100000 to 100000 ERPM
+
+**Note**: Output speed = ERPM / pole_pairs / reduction_ratio
+
+**Example**: 1000 ERPM → send `0x000003E8`
+
+### 5. Position Loop Mode (ID: 4)
+
+**CAN ID**: `(4 << 8) | Drive_ID`
+
+**Data Format** (4 bytes, Big-Endian int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Position = (int32) / 10000.0`
+**Range**: -36000° to 36000° (-360000000 to 360000000)
+
+**Example**: 180° → send `0x0ABA9500`
+
+### 6. Setting Origin Mode (ID: 5)
+
+**CAN ID**: `(5 << 8) | Drive_ID`
+
+**Data Format** (1 byte):
+```
+| Data[0] |
+| 0 = Temporary origin (lost on power-off) |
+| 1 = Permanent origin (saved to Flash) |
+```
+
+### 7. Position-Velocity Loop Mode (ID: 6)
+
+**CAN ID**: `(6 << 8) | Drive_ID`
+
+**Data Format** (8 bytes):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] | Data[4] | Data[5] | Data[6] | Data[7] |
+| Position Bits 25-32 | Position Bits 17-24 | Position Bits 9-16 | Position Bits 1-8 | Speed High | Speed Low | Accel High | Accel Low |
+```
+
+**Formulas**:
+- `Position = (int32) / 10000.0` (degrees)
+- `Speed = (int16) * 10` (ERPM)
+- `Acceleration = (int16) * 10` (ERPM/s²)
+
+**Ranges**:
+- Position: -36000° to 36000°
+- Speed: -327680 to 327680 ERPM
+- Acceleration: 0 to 327670 ERPM/s²
+
+### 8. Motor Disable Mode (ID: 15)
+
+**CAN ID**: `(15 << 8) | Drive_ID`
+
+**Data Format**: Send empty frame (DLC = 8, any data)
+
+The motor will respond by setting DATA[7] of frame ID 0x29 to `0x77`.
+
+### 9. Feedback Message Configuration (ID: 16)
+
+**CAN ID**: `(16 << 8) | Drive_ID`
+
+**Data Format**: Last 2 bytes contain configuration parameter
+
+```
+| Data[0] | Data[1] | Data[2] | Data[3] | Data[4] | Data[5] | Data[6] | Data[7] |
+| 0 | 0 | 0 | 0 | 0 | Param High | Param Low | |
+```
+
+**Parameter Bits**:
+- Bit[15]: Enable 4-byte position feedback (ID 0x2A)
+- Bit[14]: Single-turn mode (0-360° position range)
+- Other bits: Reserved
+
+**Example**: `0x8000` enables 4-byte position feedback
+
+**Warning**: This writes to Flash memory. Don't send frequently.
+
+---
+
+## Force Control Mode (MIT)
+
+### Overview
+
+Force Control Mode uses **Control ID = 8** and supports three sub-modes determined by the transmitted data:
+
+| Sub-Mode | Description |
+|------------|-------------|
+| Position Loop | Operate with specified position, Kp, Kd |
+| Velocity Loop | Operate with specified speed, Kd |
+| Torque Loop | Operate with specified torque |
+
+### CAN Frame Structure for MIT Mode
+
+**CAN ID**: `(8 << 8) | Drive_ID`
+
+**8-Byte Data Format**:
+```
+| Byte | Content |
+|------|---------|
+| Data[0] | Kp high 8 bits |
+| Data[1] | Kp low 4 bits | Kd high 4 bits |
+| Data[2] | Kd low 8 bits |
+| Data[3] | Position high 8 bits |
+| Data[4] | Position low 8 bits |
+| Data[5] | Speed high 8 bits |
+| Data[6] | Speed low 4 bits | Torque high 4 bits |
+| Data[7] | Torque low 8 bits |
+```
+
+### Parameter Conversion
+
+All parameters must be converted to unsigned integers using bit-scaled conversion:
+
+```c
+int float_to_uint(float x, float x_min, float x_max, unsigned int bits) {
+    float span = x_max - x_min;
+    if (x < x_min) x = x_min;
+    if (x > x_max) x = x_max;
+    return (int)((x - x_min) * ((float)(1 << bits) / span));
+}
+```
+
+### Motor-Specific Parameter Ranges
+
+| Motor Model | KV | Torque Coeff. (N·m/A) | Position (rad) | Speed (rad/s) | Kp Range | Kd Range |
+|------------|-----|------------------------|----------------|--------------|----------|----------|
+| AK10-9 | 60 | 1.3137 | ±12.56 | ±28.0 | 0-5000 | 0-5 |
+| AK60-6 | 80 | 0.5994 | ±60.0 | ±12.0 | - | - |
+| AK60-3 | 98 | 0.4616 | ±10.0 | ±80.0 | - | - |
+| AK70-9 | 60 | 1.0621 | ±30.0 | ±32.0 | - | - |
+| AK80-8 | 60 | 1.0569 | ±38.0 | ±32.0 | - | - |
+| AK80-9 | 100 | 0.5701 | ±65.0 | ±18.0 | - | - |
+| AKE60-8 | 80 | 0.7382 | ±40.0 | ±15.0 | - | - |
+| AKE80-8 | 30 | 1.7909 | ±20.0 | ±35.0 | - | - |
+| AKE90-8 | 35 | 1.8265 | ±20.0 | ±150.0 | - | - |
+| AKH70-16 | 41 | 2.8334 | ±13.0 | ±110.0 | - | - |
+| AKH70-48 | 41 | 8.8123 | ±5.0 | ±280.0 | - | - |
+
+### Torque Calculation
+
+```
+T = Kt × Iq
+
+Where:
+- T = Output torque at the output shaft (N·m)
+- Kt = Torque coefficient (N·m/A)
+- Iq = Torque current (A)
+```
+
+### Example Packing Function
+
+```c
+void pack_cmd(uint8_t controller_id, float p_des, float v_des, float kp, float kd, float t_ff) {
+    uint8_t buffer[8];
+    
+    // Clamp values
+    p_des = clamp(p_des, P_MIN, P_MAX);
+    v_des = clamp(v_des, V_MIN, V_MAX);
+    kp = clamp(kp, Kp_MIN, Kp_MAX);
+    kd = clamp(kd, Kd_MIN, Kd_MAX);
+    t_ff = clamp(t_ff, T_MIN, T_MAX);
+    
+    // Convert to unsigned ints
+    int p_int = float_to_uint(p_des, P_MIN, P_MAX, 16);
+    int v_int = float_to_uint(v_des, V_MIN, V_MAX, 12);
+    int kp_int = float_to_uint(kp, Kp_MIN, Kp_MAX, 12);
+    int kd_int = float_to_uint(kd, Kd_MIN, Kd_MAX, 12);
+    int t_int = float_to_uint(t_ff, T_MIN, T_MAX, 12);
+    
+    // Pack into CAN buffer
+    buffer[0] = kp_int >> 8;                    // Kp high 8 bits
+    buffer[1] = ((kp_int & 0xF) << 4) | (kd_int >> 8);  // Kp low 4 | Kd high 4
+    buffer[2] = kd_int & 0xFF;                  // Kd low 8 bits
+    buffer[3] = p_int >> 8;                     // Position high 8 bits
+    buffer[4] = p_int & 0xFF;                   // Position low 8 bits
+    buffer[5] = v_int >> 8;                     // Speed high 8 bits
+    buffer[6] = ((v_int & 0xF) << 4) | (t_int >> 8);  // Speed low 4 | Torque high 4
+    buffer[7] = t_int & 0xFF;                   // Torque low 8 bits
+    
+    // Send via CAN
+    can_send(controller_id | (8 << 8), buffer, 8);
+}
+```
+
+---
+
+## Feedback Messages
+
+### CAN Feedback Frame (ID 0x29)
+
+The motor sends real-time status via timed upload mode. Upload frequency is configurable (1-2000 Hz).
+
+**CAN ID**: `(0x29 << 8) | Drive_ID`
+
+**8-Byte Data Format**:
+```
+| Byte | Content |
+|------|---------|
+| Data[0] | Position high byte |
+| Data[1] | Position low byte |
+| Data[2] | Speed high byte |
+| Data[3] | Speed low byte |
+| Data[4] | Current high byte |
+| Data[5] | Current low byte |
+| Data[6] | Motor temperature |
+| Data[7] | Error code |
+```
+
+**Decoding Formulas**:
+```c
+// Position (int16, range -32000 to 32000)
+Position = (int16) / 10.0  // Result in degrees (-3200° to 3200°)
+
+// Speed (int16, range -32000 to 32000)
+Speed = (int16) * 10.0  // Result in ERPM (-320000 to 320000)
+
+// Current (int16, range -6000 to 6000)
+Current = (int16) * 0.01  // Result in Amperes (-60A to 60A)
+
+// Temperature (int8, range -20 to 127)
+Temperature = (int8)  // Result in °C
+
+// Error Code (uint8)
+Error = Data[7]
+```
+
+**Example Receiver Function**:
+```c
+void motor_receive(float *pos, float *spd, float *cur, int8_t *temp, uint8_t *error, rx_msg) {
+    int16_t pos_int = (rx_msg->Data[0] << 8) | rx_msg->Data[1];
+    int16_t spd_int = (rx_msg->Data[2] << 8) | rx_msg->Data[3];
+    int16_t cur_int = (rx_msg->Data[4] << 8) | rx_msg->Data[5];
+    
+    *pos = pos_int * 0.1f;
+    *spd = spd_int * 10.0f;
+    *cur = cur_int * 0.01f;
+    *temp = rx_msg->Data[6];
+    *error = rx_msg->Data[7];
+}
+```
+
+### Optional Extended Position Frame (ID 0x2A)
+
+When configured via Feedback Message Configuration command, an additional 4-byte position frame is sent.
+
+**CAN ID**: `(0x2A << 8) | Drive_ID`
+
+**Data Format** (4 bytes, int32):
+```
+| Data[0] | Data[1] | Data[2] | Data[3] |
+| Bit 25-32 | Bit 17-24 | Bit 9-16 | Bit 1-8 |
+```
+
+**Formula**: `Position = (int32) / 100.0`
+**Range**: -21,474,836.48° to 21,474,836.47°
+
+---
+
+## Error Codes
+
+| Code | Error Description |
+|------|-------------------|
+| 0 | None |
+| 1 | Motor over-temperature |
+| 2 | Over-current |
+| 3 | Over-voltage |
+| 4 | Under-voltage |
+| 5 | Encoder fault |
+| 6 | MOSFET over-temperature |
+| 7 | Motor lock-up |
+
+### Detailed Fault Codes (Serial)
+
+| Code | Description |
+|------|-------------|
+| 0 | FAULT_CODE_NONE |
+| 1 | FAULT_CODE_OVER_VOLTAGE |
+| 2 | FAULT_CODE_UNDER_VOLTAGE |
+| 3 | FAULT_CODE_DRV |
+| 4 | FAULT_CODE_ABS_OVER_CURRENT |
+| 5 | FAULT_CODE_OVER_TEMP_FET |
+| 6 | FAULT_CODE_OVER_TEMP_MOTOR |
+| 7 | FAULT_CODE_GATE_DRIVER_OVER_VOLTAGE |
+| 8 | FAULT_CODE_GATE_DRIVER_UNDER_VOLTAGE |
+| 9 | FAULT_CODE_MCU_UNDER_VOLTAGE |
+| 10 | FAULT_CODE_BOOTING_FROM_WATCHDOG_RESET |
+| 11 | FAULT_CODE_ENCODER_SPI |
+| 12 | FAULT_CODE_ENCODER_SINCOS_BELOW_MIN_AMPLITUDE |
+| 13 | FAULT_CODE_ENCODER_SINCOS_ABOVE_MAX_AMPLITUDE |
+| 14 | FAULT_CODE_FLASH_CORRUPTION |
+| 15 | FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_1 |
+| 16 | FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_2 |
+| 17 | FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_3 |
+| 18 | FAULT_CODE_UNBALANCED_CURRENTS |
+
+---
+
+## Code Examples
+
+### CAN Transmission Helper Functions
+
+```c
+// Append int32 to buffer (Big-Endian)
+void buffer_append_int32(uint8_t *buffer, int32_t number, int32_t *index) {
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+// Append int16 to buffer (Big-Endian)
+void buffer_append_int16(uint8_t *buffer, int16_t number, int16_t *index) {
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+// Append uint16 to buffer (Big-Endian)
+void buffer_append_uint16(uint8_t *buffer, uint16_t number, int32_t *index) {
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+// Transmit CAN message
+void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
+    if (len > 8) len = 8;
+    // Configure and transmit CAN frame
+    // TxMessage.ExtId = id;
+    // TxMessage.IDE = CAN_ID_EXT;
+    // TxMessage.DLC = len;
+    // memcpy(TxMessage.Data, data, len);
+    // CAN_Transmit(CAN_PORT, &TxMessage);
+}
+```
+
+### Servo Mode Control Functions
+
+```c
+// Set duty cycle
+void comm_can_set_duty(uint8_t controller_id, float duty) {
+    int32_t idx = 0;
+    uint8_t buffer[4];
+    buffer_append_int32(buffer, (int32_t)(duty * 100000.0), &idx);
+    comm_can_transmit_eid(controller_id | ((uint32_t)0 << 8), buffer, idx);
+}
+
+// Set current (torque)
+void comm_can_set_current(uint8_t controller_id, float current) {
+    int32_t idx = 0;
+    uint8_t buffer[4];
+    buffer_append_int32(buffer, (int32_t)(current * 1000.0), &idx);
+    comm_can_transmit_eid(controller_id | ((uint32_t)1 << 8), buffer, idx);
+}
+
+// Set velocity
+void comm_can_set_rpm(uint8_t controller_id, float rpm) {
+    int32_t idx = 0;
+    uint8_t buffer[4];
+    buffer_append_int32(buffer, (int32_t)rpm, &idx);
+    comm_can_transmit_eid(controller_id | ((uint32_t)3 << 8), buffer, idx);
+}
+
+// Set position
+void comm_can_set_pos(uint8_t controller_id, float pos) {
+    int32_t idx = 0;
+    uint8_t buffer[4];
+    buffer_append_int32(buffer, (int32_t)(pos * 10000.0), &idx);
+    comm_can_transmit_eid(controller_id | ((uint32_t)4 << 8), buffer, idx);
+}
+
+// Set origin
+void comm_can_set_origin(uint8_t controller_id, uint8_t permanent) {
+    uint8_t buffer[1] = {permanent};
+    comm_can_transmit_eid(controller_id | ((uint32_t)5 << 8), buffer, 1);
+}
+
+// Disable motor
+void comm_can_disable(uint8_t controller_id) {
+    uint8_t buffer[8] = {0};
+    comm_can_transmit_eid(controller_id | ((uint32_t)15 << 8), buffer, 0);
+}
+```
+
+### Quick Reference: CAN Command Examples
+
+| Mode | CAN ID (Hex) | Data (Hex) | Description |
+|------|------------|------------|-------------|
+| Duty Cycle | 00000068 | 000000004E20 | 0.2 Duty Cycle |
+| Duty Cycle | 00000068 | 00000000FB1E0 | -0.2 Duty Cycle |
+| Current | 00000168 | 00000000F060 | -4A Iq Current |
+| Current | 00000168 | 000000000FA0 | 4A Iq Current |
+| Velocity | 00000368 | 000000001388 | 5000 ERPM |
+| Velocity | 00000368 | 00000000EC78 | -5000 ERPM |
+| Position | 00000468 | 000000005B8D80 | 600 degrees |
+| Position | 00000468 | 00000000A47280 | -600 degrees |
+
+---
+
+## Appendix: Complete Command Summary
+
+### CAN Control Commands
+
+| ID | Mode | Bytes | Data Type | Scale | Range |
+|----|------|-------|-----------|-------|-------|
+| 0 | Duty Cycle | 4 | int32 | /100000 | -1.0 to 1.0 |
+| 1 | Current | 4 | int32 | /1000 | -60A to 60A |
+| 2 | Brake Current | 4 | int32 | /1000 | 0A to 60A |
+| 3 | Velocity | 4 | int32 | ×10 | -100000 ERPM |
+| 4 | Position | 4 | int32 | /10000 | -36000° to 36000° |
+| 5 | Set Origin | 1 | uint8 | - | 0=Temp, 1=Perm |
+| 6 | Pos+Vel+Acc | 8 | int32+int16+int16 | Various | See above |
+| 8 | MIT Mode | 8 | Bit-packed | Scaled | Motor-specific |
+| 15 | Disable | 0 | - | - | - |
+| 16 | Config | 2 | uint16 | - | Bitmask |
+
+### Serial Control Commands
+
+| ID | Mode | Payload | Description |
+|----|------|---------|-------------|
+| 69 | Get Values | None | Query motor parameters |
+| 70 | Set Duty | 4 bytes | Set duty cycle |
+| 71 | Set Current | 4 bytes | Set Iq current |
+| 72 | Set Brake | 4 bytes | Set brake current |
+| 73 | Set RPM | 4 bytes | Set speed |
+| 74 | Set Position | 4 bytes | Set position |
+| 75 | Set Handbrake | 4 bytes | Set handbrake current |
+| 76 | Set Detect | 4 bytes | Enable position feedback |
+
+---
+
+*Documentation generated from AK-Series Product Manual V3.2.0 for AK 3.0 Robotic Actuator*
+*CascadeMars / CubeMars*

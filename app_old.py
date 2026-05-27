@@ -34,7 +34,7 @@ from WaveshareServoController import WaveshareServoController
 last_update_time = 0
 update_interval = 0.1  # Minimum interval between updates in seconds
 
-ODrive = False
+ODrive = True
 SPM = False
 # Gripper = False
 # SPM_Gripper = False  
